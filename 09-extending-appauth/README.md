@@ -1,15 +1,89 @@
-# Tutorial 09: Upgrades and Custom Authorization
+# Tutorial 09: Multi-Node and Custom Authorization
 
-Extend the `AppAuth` contract with custom authorization logic for your dstack apps.
+Deploy multi-node setups with `allowAnyDevice` and extend AppAuth with custom logic.
+
+## Prerequisites
+
+Complete [05-onchain-authorization](../05-onchain-authorization) first to understand AppAuth basics.
 
 ## Overview
 
-dstack uses on-chain contracts to authorize which apps can access the KMS. The base `DstackApp.sol` contract provides simple compose-hash and device-id whitelisting. You can extend this with custom logic:
+The default `phala deploy` creates an AppAuth that only allows a single device. For multi-node deployments or custom authorization logic, you need to deploy the contract yourself.
 
-- NFT-gated membership (1 NFT = 1 authorized node)
-- Timelock governance (delay before new compose hashes activate)
-- Multi-sig approval
-- On-chain voting
+This tutorial covers:
+- Multi-node with `allowAnyDevice=true`
+- Owner-controlled device/hash whitelisting
+- Custom AppAuth contracts (NFT-gated, timelock, multi-sig)
+
+## Multi-Node with allowAnyDevice
+
+Deploy with `allowAnyDevice=true` so any TEE with the correct compose hash can join without per-device whitelisting.
+
+### Deploy Primary Node
+
+```bash
+export PRIVATE_KEY="0x..."
+python3 deploy_with_contract.py
+```
+
+Output:
+```
+Deploying CVM with allowAnyDevice=true
+============================================================
+Compose File Name: tee-oracle-shared (determines compose_hash)
+  -> All replicas must use this same compose_file.name!
+
+Step 1: Provisioning CVM resources...
+  Compose Hash: 0x392b8a1f...
+Step 2: Deploying AppAuth contract with allowAnyDevice=true...
+  App ID: 0xc96d55b03ede924c89154348be9dcffd52304af0
+Step 3: Creating CVM...
+
+SUCCESS! Save this for deploying replicas:
+  APP_ID=0xc96d55b03ede924c89154348be9dcffd52304af0
+  COMPOSE_HASH=0x392b8a1f...
+```
+
+### Deploy Replicas
+
+Edit `deploy_replica.py` with the APP_ID from above, then:
+
+```bash
+python3 deploy_replica.py
+```
+
+Both nodes now derive the same key:
+```
+Node 1: Oracle signer: 0x7a3B...  (same!)
+Node 2: Oracle signer: 0x7a3B...  (same!)
+```
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              AppAuth Contract (allowAnyDevice=true)         │
+│                                                             │
+│  allowedComposeHashes[0x392b...] = true                     │
+│  allowAnyDevice = true                                      │
+│                                                             │
+│  isAppAllowed(bootInfo):                                    │
+│    if composeHash in allowedComposeHashes → ALLOW           │
+│    (device ID doesn't matter)                               │
+└─────────────────────────────────────────────────────────────┘
+          │                           │
+          ▼                           ▼
+    ┌──────────┐               ┌──────────┐
+    │  Node 1  │               │  Node 2  │
+    │  prod5   │               │  prod9   │
+    └──────────┘               └──────────┘
+          │                           │
+          │  getKey("/oracle")        │  getKey("/oracle")
+          ▼                           ▼
+    Same derived key            Same derived key
+```
+
+**The compose_file.name trick:** All replicas must use the same `compose_file.name` (not CVM name) to get the same compose_hash. See `COMPOSE_FILE_NAME` in `deploy_with_contract.py` and `deploy_replica.py`.
 
 ## The AppAuth Interface
 
@@ -192,6 +266,8 @@ python3 add_compose_hash.py
 
 ```
 09-extending-appauth/
+├── deploy_with_contract.py    # Deploy with allowAnyDevice=true
+├── deploy_replica.py          # Deploy replica using existing appId
 ├── add_device.py              # Add device to whitelist
 ├── add_compose_hash.py        # Add compose hash (for upgrades)
 └── README.md

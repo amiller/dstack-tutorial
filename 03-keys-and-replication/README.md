@@ -144,55 +144,17 @@ await client.getKey('/signing/oracle')   // Oracle signatures
 
 Multiple TEE nodes can derive the **same key** if they share the same `appId`. This enables redundancy and load balancing while maintaining a single signing identity.
 
-### Deploy with allowAnyDevice
-
-The simplest multi-node setup uses `allowAnyDevice=true`, which lets any TEE with the correct compose hash join:
-
-```bash
-# Deploy first node (deploys AppAuth contract with allowAnyDevice=true)
-export PRIVATE_KEY="0x..."
-python3 deploy_with_contract.py
-```
-
-Output:
-```
-SUCCESS! Save this for deploying replicas:
-  APP_ID=0xc96d55b03ede924c89154348be9dcffd52304af0
-  COMPOSE_HASH=0x392b8a1f...
-```
-
-### Deploy Replicas
-
-Edit `deploy_replica.py` with the APP_ID from above, then:
-
-```bash
-python3 deploy_replica.py
-```
-
-Both nodes now derive the same key:
-```
-Node 1: Oracle signer: 0x7a3B...  (same!)
-Node 2: Oracle signer: 0x7a3B...  (same!)
-```
-
-### How It Works
-
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              AppAuth Contract (allowAnyDevice=true)          │
+│              AppAuth Contract (allowAnyDevice=true)         │
 │                                                             │
 │  allowedComposeHashes[0x392b...] = true                     │
 │  allowAnyDevice = true                                      │
-│                                                             │
-│  isAppAllowed(bootInfo):                                    │
-│    if composeHash in allowedComposeHashes → ALLOW           │
-│    (device ID doesn't matter)                               │
 └─────────────────────────────────────────────────────────────┘
           │                           │
           ▼                           ▼
     ┌──────────┐               ┌──────────┐
     │  Node 1  │               │  Node 2  │
-    │  prod5   │               │  prod9   │
     └──────────┘               └──────────┘
           │                           │
           │  getKey("/oracle")        │  getKey("/oracle")
@@ -200,7 +162,7 @@ Node 2: Oracle signer: 0x7a3B...  (same!)
     Same derived key            Same derived key
 ```
 
-For more controlled multi-node setups (owner-approved devices, custom AppAuth), see [05-onchain-authorization](../05-onchain-authorization).
+For multi-node deployment with `allowAnyDevice=true`, see [09-extending-appauth](../09-extending-appauth).
 
 ## Files
 
@@ -208,8 +170,6 @@ For more controlled multi-node setups (owner-approved devices, custom AppAuth), 
 03-keys-and-replication/
 ├── docker-compose.yaml       # Oracle with signing
 ├── test_local.py             # Signature chain verification
-├── deploy_with_contract.py   # Deploy with allowAnyDevice=true
-├── deploy_replica.py         # Deploy replica using existing appId
 ├── requirements.txt          # Python dependencies
 └── README.md
 ```
@@ -217,20 +177,7 @@ For more controlled multi-node setups (owner-approved devices, custom AppAuth), 
 ## Next Steps
 
 - [04-gateways-and-tls](../04-gateways-and-tls): Custom domains and TLS
-- [05-onchain-authorization](../05-onchain-authorization): On-chain verification contract, AppAuth deployment
-
-## Open Questions
-
-> **TODO: Investigate AppAuth in baremetal dstack**
->
-> Currently, each new deployment requires calling `addComposeHash()` even if `allowAnyDevice=true` and the device is already whitelisted. This is because the compose_hash changes with each deployment (different salt/name).
->
-> Questions to investigate:
-> - Where does baremetal dstack validate against AppAuth? (Not just Phala Cloud)
-> - Can we specify a fixed salt to get the same compose_hash across replicas?
-> - Should AppAuth support wildcards or patterns for compose validation?
->
-> See: [05-onchain-authorization](../05-onchain-authorization) for AppAuth contract details.
+- [05-onchain-authorization](../05-onchain-authorization): On-chain AppAuth and upgrade history
 
 ## References
 

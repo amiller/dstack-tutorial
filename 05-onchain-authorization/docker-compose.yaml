@@ -51,25 +51,18 @@ services:
 
         async function getSignedPrice(oracle) {
           const { data, tlsFingerprint } = await fetchWithTls(API_URL)
+          const priceUsd = Math.floor(data.bitcoin.usd * 100)
+          const timestamp = Math.floor(Date.now() / 1000)
 
-          const statement = {
-            source: "api.coingecko.com",
-            price: data.bitcoin.usd,
-            tlsFingerprint,
-            timestamp: Date.now()
-          }
-
-          const messageHash = keccak256(
-            encodePacked(
-              ["string", "uint256", "uint256", "string"],
-              [statement.source, BigInt(Math.floor(statement.price * 100)), BigInt(statement.timestamp), statement.tlsFingerprint]
-            )
-          )
-
+          // Simple hash format for on-chain verification: keccak256(price, timestamp)
+          const messageHash = keccak256(encodePacked(["uint256", "uint256"], [BigInt(priceUsd), BigInt(timestamp)]))
           const signature = await oracle.account.signMessage({ message: { raw: messageHash } })
 
           return {
-            statement,
+            price: priceUsd,
+            timestamp,
+            source: "api.coingecko.com",
+            tlsFingerprint,
             messageHash,
             signature,
             signatureChain: {

@@ -3,18 +3,84 @@ pragma solidity ^0.8.22;
 
 /**
  * @title TeeOracle
- * @notice Verifies TEE oracle signatures via DStack signature chain
- * @dev Based on SimpleDstackVerifier pattern from dstack-kms-simulator
+ * @notice Request/fulfill oracle with TEE signature verification
+ * @dev Uses DStack signature chain to verify oracle responses
  */
 contract TeeOracle {
     address public immutable kmsRoot;
     bytes32 public immutable appId;
 
+    struct Request {
+        address requester;
+        uint256 reward;
+        uint256 timestamp;
+        bool fulfilled;
+    }
+
+    mapping(uint256 => Request) public requests;
+    uint256 public nextRequestId;
+
+    event RequestCreated(uint256 indexed requestId, address indexed requester, uint256 reward);
+    event RequestFulfilled(uint256 indexed requestId, uint256 price, address fulfiller);
     event OracleMessageVerified(bytes32 indexed messageHash, address signer);
 
     constructor(address _kmsRoot, bytes32 _appId) {
         kmsRoot = _kmsRoot;
         appId = _appId;
+    }
+
+    /// @notice Post a price request with ETH reward
+    function request() external payable returns (uint256 requestId) {
+        require(msg.value > 0, "need reward");
+        requestId = nextRequestId++;
+        requests[requestId] = Request({
+            requester: msg.sender,
+            reward: msg.value,
+            timestamp: block.timestamp,
+            fulfilled: false
+        });
+        emit RequestCreated(requestId, msg.sender, msg.value);
+    }
+
+    struct OracleProof {
+        bytes32 messageHash;
+        bytes messageSignature;
+        bytes appSignature;
+        bytes kmsSignature;
+        bytes derivedCompressedPubkey;
+        bytes appCompressedPubkey;
+        string purpose;
+    }
+
+    /// @notice Fulfill a request with verified oracle response, claim reward
+    function fulfill(
+        uint256 requestId,
+        uint256 price,
+        uint256 priceTimestamp,
+        OracleProof calldata proof
+    ) external {
+        Request storage req = requests[requestId];
+        require(!req.fulfilled, "already fulfilled");
+        require(req.reward > 0, "no request");
+
+        // Verify message hash matches price data
+        bytes32 expectedHash = keccak256(abi.encodePacked(price, priceTimestamp));
+        require(proof.messageHash == expectedHash, "hash mismatch");
+
+        // Verify signature chain
+        require(
+            verify(proof.messageHash, proof.messageSignature, proof.appSignature,
+                   proof.kmsSignature, proof.derivedCompressedPubkey,
+                   proof.appCompressedPubkey, proof.purpose),
+            "invalid sig"
+        );
+
+        // Mark fulfilled and pay reward
+        req.fulfilled = true;
+        uint256 reward = req.reward;
+        emit RequestFulfilled(requestId, price, msg.sender);
+        (bool ok,) = msg.sender.call{value: reward}("");
+        require(ok, "transfer failed");
     }
 
     /**

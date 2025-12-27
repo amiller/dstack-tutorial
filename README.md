@@ -113,14 +113,14 @@ phala deploy -n my-app -c docker-compose.yaml
 2. **[02-bitrot-and-reproducibility](./02-bitrot-and-reproducibility)** — Deterministic builds that auditors can verify now and later
 3. **[03-keys-and-replication](./03-keys-and-replication)** — Persistent keys via KMS and multi-node deployments
 4. **[04-gateways-and-tls](./04-gateways-and-tls)** — Self-signed TLS with attestation-bound certificates
-5. **[05-onchain-authorization](./05-onchain-authorization)** — AppAuth contracts for on-chain key derivation control
+5. **[05-onchain-authorization](./05-onchain-authorization)** — AppAuth updates, upgrade history, and on-chain oracle verification
 6. **[06-hardening-https](./06-hardening-https)** — OCSP stapling, CRL checking, CT records ([oracle template](https://cloud.phala.network/templates/node-oracle-template))
 
 ### Advanced
 
 7. **[07-encryption-freshness](./07-encryption-freshness)** — Encrypted storage, integrity, rollback protection
 8. **[08-lightclient](./08-lightclient)** — Verified blockchain state via Helios light client
-9. **[09-extending-appauth](./09-extending-appauth)** — Custom authorization contracts (timelocks, NFT-gating, multisig)
+9. **[09-extending-appauth](./09-extending-appauth)** — Multi-node deployment, custom authorization (timelocks, NFT-gating, multisig)
 
 ---
 
