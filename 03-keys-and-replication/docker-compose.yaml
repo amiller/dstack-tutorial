@@ -1,0 +1,107 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:22-slim
+        WORKDIR /app
+        RUN npm init -y && npm install @phala/dstack-sdk viem
+        RUN cat > index.mjs <<'SCRIPT'
+        import { DstackClient } from "@phala/dstack-sdk"
+        import { createServer } from "http"
+        import https from "https"
+        import { privateKeyToAccount } from "viem/accounts"
+        import { keccak256, encodePacked, toHex, hexToBytes } from "viem"
+        import { secp256k1 } from "@noble/curves/secp256k1"
+
+        const client = new DstackClient()
+        const API_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+
+        async function getOracleKey() {
+          const result = await client.getKey("/oracle", "ethereum")
+          const privateKey = "0x" + Buffer.from(result.key).toString("hex").slice(0, 64)
+          const account = privateKeyToAccount(privateKey)
+
+          // Extract compressed public key for signature chain verification
+          const derivedPrivBytes = hexToBytes(privateKey)
+          const derivedPubkey = secp256k1.getPublicKey(derivedPrivBytes.slice(0, 32), true)
+
+          const toHexStr = (x) => typeof x === 'string' ? x : '0x' + Buffer.from(x).toString('hex')
+          return {
+            account,
+            derivedPubkey: toHex(derivedPubkey),
+            appSignature: toHexStr(result.signature_chain[0]),
+            kmsSignature: toHexStr(result.signature_chain[1])
+          }
+        }
+
+        function fetchWithTls(url) {
+          return new Promise((resolve, reject) => {
+            https.get(url, res => {
+              const cert = res.socket.getPeerCertificate()
+              let body = ""
+              res.on("data", c => body += c)
+              res.on("end", () => resolve({
+                data: JSON.parse(body),
+                tlsFingerprint: cert.fingerprint256
+              }))
+            }).on("error", reject)
+          })
+        }
+
+        async function getSignedPrice(oracle) {
+          const { data, tlsFingerprint } = await fetchWithTls(API_URL)
+
+          const statement = {
+            source: "api.coingecko.com",
+            price: data.bitcoin.usd,
+            tlsFingerprint,
+            timestamp: Date.now()
+          }
+
+          const messageHash = keccak256(
+            encodePacked(
+              ["string", "uint256", "uint256", "string"],
+              [statement.source, BigInt(Math.floor(statement.price * 100)), BigInt(statement.timestamp), statement.tlsFingerprint]
+            )
+          )
+
+          const signature = await oracle.account.signMessage({ message: { raw: messageHash } })
+
+          return {
+            statement,
+            messageHash,
+            signature,
+            signatureChain: {
+              derivedPubkey: oracle.derivedPubkey,
+              appSignature: oracle.appSignature,
+              kmsSignature: oracle.kmsSignature
+            },
+            signerAddress: oracle.account.address
+          }
+        }
+
+        const oracle = await getOracleKey()
+        const info = await client.info()
+        console.log("Oracle signer:", oracle.account.address)
+        console.log("App ID:", info.app_id)
+
+        createServer(async (req, res) => {
+          res.writeHead(200, { "Content-Type": "application/json" })
+          if (req.url === "/price") {
+            res.end(JSON.stringify(await getSignedPrice(oracle), null, 2))
+          } else {
+            res.end(JSON.stringify({
+              endpoints: ["/", "/price"],
+              appId: info.app_id,
+              signerAddress: oracle.account.address,
+              derivedPubkey: oracle.derivedPubkey
+            }, null, 2))
+          }
+        }).listen(8080, () => console.log("Oracle at http://localhost:8080"))
+        SCRIPT
+        CMD ["node", "index.mjs"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/dstack.sock:/var/run/dstack.sock

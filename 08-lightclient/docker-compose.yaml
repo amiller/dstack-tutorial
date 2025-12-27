@@ -1,0 +1,113 @@
+services:
+  app:
+    configs:
+      - source: run.sh
+        target: /root/run.sh
+      - source: oracle.py
+        target: /root/oracle.py
+    volumes:
+      - /var/run/dstack.sock:/var/run/dstack.sock
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ubuntu:24.04@sha256:b59d21599a2b151e23eea5f6602f4af4d7d31c4e236d22bf0b62b86d2e386b8f
+        RUN apt-get update && apt install -y curl python3 python3-pip
+        RUN pip3 install --break-system-packages ecdsa requests dstack-sdk
+        WORKDIR /root
+        # Helios 0.11.0
+        RUN curl -L 'https://github.com/a16z/helios/releases/download/0.11.0/helios_linux_amd64.tar.gz' | tar -xzC .
+        CMD ["bash", "/root/run.sh"]
+    platform: linux/amd64
+
+configs:
+  run.sh:
+    content: |
+      RPC=$${ETH_RPC_URL:-https://ethereum-rpc.publicnode.com}
+      echo "Using execution RPC: $$RPC"
+
+      /root/helios ethereum \
+        --network mainnet \
+        --execution-rpc "$$RPC" \
+        --fallback https://sync-mainnet.beaconcha.in \
+        --rpc-bind-ip 0.0.0.0 &
+
+      echo "Waiting for Helios to sync..."
+      for i in $$(seq 1 30); do
+        if curl -s localhost:8545 -X POST -H "Content-Type: application/json" \
+          -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' | grep -q result; then
+          echo "Helios synced!"
+          break
+        fi
+        sleep 2
+      done
+
+      python3 /root/oracle.py
+
+  oracle.py:
+    content: |
+      import json, hashlib, requests
+      from ecdsa import SigningKey, NIST256p
+
+      HELIOS = "http://localhost:8545"
+      CHECKPOINT_API = "https://sync-mainnet.beaconcha.in"
+      DAI = "0x6b175474e89094c44da98b954eedeac495271d0f"
+
+      # Try to connect to TEE environment
+      client = None
+      try:
+          from dstack_sdk import TappdClient
+          client = TappdClient()
+          key_result = client.derive_key("/oracle", "")
+          sk = SigningKey.from_pem(key_result.key)
+          print(f"TEE: using derived key (curve: {sk.curve.name})", flush=True)
+      except Exception as e:
+          print(f"WARNING: Not in TEE ({e}), using random key", flush=True)
+          sk = SigningKey.generate(curve=NIST256p)
+          client = None
+
+      pk = sk.get_verifying_key()
+
+      def rpc(method, params=[]):
+          r = requests.post(HELIOS, json={"jsonrpc":"2.0","method":method,"params":params,"id":1})
+          resp = r.json()
+          if "error" in resp:
+              raise Exception(resp["error"])
+          return resp.get("result")
+
+      def get_checkpoint():
+          r = requests.get(f"{CHECKPOINT_API}/checkpointz/v1/status", timeout=5)
+          data = r.json()["data"]["finality"]["finalized"]
+          return {"epoch": int(data["epoch"]), "root": data["root"]}
+
+      # Fetch verified data via Helios
+      checkpoint = get_checkpoint()
+      block_num = rpc("eth_blockNumber")
+      block = rpc("eth_getBlockByNumber", [block_num, False])
+      call_result = rpc("eth_call", [{"to": DAI, "data": "0x18160ddd", "gas": "0x100000"}, block_num])
+
+      claim = {
+          "type": "lightclient_attestation",
+          "network": "mainnet",
+          "checkpoint_epoch": checkpoint["epoch"],
+          "checkpoint_root": checkpoint["root"],
+          "block_number": int(block_num, 16),
+          "block_hash": block["hash"],
+          "state_root": block["stateRoot"],
+          "call": {"to": DAI, "data": "0x18160ddd", "result": call_result},
+      }
+
+      claim_bytes = json.dumps(claim, sort_keys=True).encode()
+      claim_hash = hashlib.sha256(claim_bytes).digest()
+      sig = sk.sign_deterministic(claim_hash, hashfunc=hashlib.sha256)
+
+      quote = client.tdx_quote(claim_hash.hex()).quote if client else None
+
+      proof = {
+          "claim": claim,
+          "claimHash": claim_hash.hex(),
+          "signature": sig.hex(),
+          "pubkey": pk.to_string().hex(),
+          "quote": quote,
+      }
+
+      print(json.dumps(proof, indent=2))

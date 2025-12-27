@@ -1,0 +1,8 @@
+{
+  "name": "tee-oracle",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@phala/dstack-sdk": "0.5.7"
+  }
+}
