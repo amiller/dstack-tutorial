@@ -15,6 +15,20 @@ This is what smart contracts and DeFi aspire to, but TEEs let us apply it to pra
 | User consent collection | Developer can prove they collected N consents |
 | Data handling | Developer can prove no user data was exposed |
 
+### The Trust Model Shift
+
+Traditional TEE apps: *"Trust me, it runs in a TEE"*
+
+DevProof TEE apps: *"Don't trust me — verify the code, check the upgrade history"*
+
+This mirrors how DeFi protocols handle governance. Projects like Compound and Uniswap use [Governor contracts with timelocks](https://docs.openzeppelin.com/contracts/4.x/governance) — proposed changes must wait before execution, giving stakeholders time to review. The same pattern applies to TEE code upgrades.
+
+The building blocks:
+
+1. **Verifiable code** — Auditors can confirm source matches deployed hash ([01](./01-attestation-and-reference-values), [02](./02-bitrot-and-reproducibility))
+2. **On-chain upgrade history** — Every code change is recorded as an event ([05](./05-onchain-authorization))
+3. **Governance controls** — Timelocks, multisig, or custom policies for upgrades ([09](./09-extending-appauth))
+
 ## Why This Tutorial?
 
 **Running in a TEE doesn't automatically make your app DevProof.** If you follow typical Dstack guides, you'll get an ordinary server where you (the admin) can still "rug" your users. The app runs in a TEE, but the developer retains backdoors.
@@ -116,18 +130,18 @@ GitHub Actions runs tests on every push:
 
 ### Core Tutorial
 
-1. **[01-attestation-and-reference-values](./01-attestation-and-reference-values)** — TEE quotes, measured values, and computing reference hashes
+1. **[01-attestation-and-reference-values](./01-attestation-and-reference-values)** — TEE quotes, reference hashes, and the auditor's perspective
 2. **[02-bitrot-and-reproducibility](./02-bitrot-and-reproducibility)** — Deterministic builds that auditors can verify now and later
 3. **[03-keys-and-replication](./03-keys-and-replication)** — Persistent keys via KMS and multi-node deployments
 4. **[04-gateways-and-tls](./04-gateways-and-tls)** — Self-signed TLS with attestation-bound certificates
-5. **[05-onchain-authorization](./05-onchain-authorization)** — AppAuth updates, upgrade history, and on-chain oracle verification
+5. **[05-onchain-authorization](./05-onchain-authorization)** — On-chain upgrade history, transparent code changes
 6. **[06-hardening-https](./06-hardening-https)** — OCSP stapling, CRL checking, CT records ([oracle template](https://cloud.phala.network/templates/node-oracle-template))
 
 ### Advanced
 
 7. **[07-encryption-freshness](./07-encryption-freshness)** — Encrypted storage, integrity, rollback protection
 8. **[08-lightclient](./08-lightclient)** — Verified blockchain state via Helios light client
-9. **[09-extending-appauth](./09-extending-appauth)** — Multi-node deployment, custom authorization (timelocks, NFT-gating, multisig)
+9. **[09-extending-appauth](./09-extending-appauth)** — **Exit guarantees**: timelocks, multi-node, custom authorization
 
 ---
 

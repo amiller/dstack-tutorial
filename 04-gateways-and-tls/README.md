@@ -8,14 +8,44 @@ Complete [01-attestation-and-reference-values](../01-attestation-and-reference-v
 
 ## The Problem
 
-TEE apps need TLS, but:
-- Let's Encrypt requires DNS control
-- HTTP relay services terminate TLS and see plaintext
-- Trusting a CA or relay breaks end-to-end TEE integrity
+Traditional TLS requires trusting Certificate Authorities. When you connect to `https://example.com`, you're trusting:
+- The CA that signed the certificate (could be compromised or coerced)
+- Any relay that terminates TLS (sees plaintext)
+- DNS resolution (could be hijacked)
 
-## The Solution: Attestation-Bound Certificates
+For DevProof applications, we want an *additional* trust anchor: the attested code itself.
 
-The TEE generates a self-signed certificate. The certificate fingerprint is included in the attestation. Clients verify the TLS cert matches what's attested - no CA needed.
+## Attested TLS
+
+**Attested TLS** doesn't replace CA certificates — it adds attestation verification on top of them.
+
+| Approach | Browser compatible? | Attestation verified? |
+|----------|--------------------|-----------------------|
+| CA-only TLS | ✓ | ✗ |
+| Self-signed + attestation | ✗ (warning) | ✓ |
+| **Attested TLS** (CA + attestation) | ✓ | ✓ |
+
+The key insight: **CA certs and attestation serve different purposes.**
+
+- CA certs prove domain ownership (browsers need this)
+- Attestation proves the code that holds the private key
+
+With Attested TLS, browsers work normally AND security-conscious clients can verify the cert was generated inside verified TEE code.
+
+**Certificate Transparency bonus:** For domains using CT (most do), you can enumerate all certificates ever issued for that domain. If every cert fingerprint appears in a valid attestation, you have strong assurance no rogue certs exist.
+
+## Two Approaches
+
+This tutorial shows both:
+
+1. **Self-signed + attestation** (simple, requires attestation verification)
+2. **Gateway with CA cert** (browser-compatible, gateway is trusted relay)
+
+---
+
+## Approach 1: Self-Signed + Attestation (ngrok TCP)
+
+The TEE generates a self-signed certificate. The fingerprint goes in the attestation. Clients verify the cert matches what's attested.
 
 ```
 ┌────────┐         ┌─────────┐         ┌─────────────────────────┐
@@ -29,21 +59,21 @@ The TEE generates a self-signed certificate. The certificate fingerprint is incl
           ngrok only sees encrypted bytes
 ```
 
-## Running with ngrok
+### Running with ngrok
 
-### 1. Get ngrok auth token
+**1. Get ngrok auth token**
 
 Sign up at [ngrok.com](https://ngrok.com) (free). TCP tunnels require identity verification (credit card on file, not charged).
 
 *Why does ngrok require verification for TCP?* Because they can't inspect the traffic - it's encrypted end-to-end. This is exactly what we want for TEE security, and ngrok's policy confirms it.
 
-### 2. Start the simulator
+**2. Start the simulator**
 
 ```bash
 phala simulator start
 ```
 
-### 3. Run with docker compose
+**3. Run with docker compose**
 
 ```bash
 export DSTACK_SOCK=~/.phala-cloud/simulator/0.5.3/dstack.sock
@@ -58,7 +88,7 @@ app-1    | Cert fingerprint: f8f240da59e4b304...
 app-1    | HTTPS server on :8443
 ```
 
-### 4. Verify the attestation-bound certificate
+**4. Verify the attestation-bound certificate**
 
 ```bash
 python3 verify_tls.py https://0.tcp.ngrok.io:12345
@@ -109,7 +139,7 @@ app.get("/attestation", async (req, res) => {
 3. Verify fingerprints match
 4. Verify the attestation quote
 
-## Local-Only Testing
+### Local-Only Testing
 
 Without ngrok (localhost only):
 ```bash
@@ -118,17 +148,87 @@ docker compose run --rm -p 8443:8443 \
 python3 verify_tls.py https://localhost:8443
 ```
 
-## Custom Domain with ngrok (Optional)
+---
 
-You can use your own domain with the free TCP tunnel:
+## Approach 2: Let's Encrypt with TLS Passthrough
 
-1. Add a CNAME: `tee.yourdomain.com → 0.tcp.ngrok.io`
-2. Run the tunnel, note the port from logs (e.g., `:12345`)
-3. Access via `https://tee.yourdomain.com:12345`
+The TEE generates a keypair and CSR. You handle the ACME DNS-01 challenge externally, then POST the signed cert back. The TEE serves HTTPS directly — the gateway just passes through encrypted traffic.
 
-The port is ephemeral, but the attestation-bound certificate still works - clients verify the cert fingerprint matches the attestation regardless of hostname.
+```
+┌────────┐                  ┌─────────────────────┐         ┌─────────────────┐
+│ Client │ ─ TLS (LE cert) ─│  dstack-gateway     │─ TCP ─ │ TEE App         │
+│        │                  │  (passthrough)      │        │ (HTTPS on 8443) │
+└────────┘                  └─────────────────────┘         └─────────────────┘
+         Gateway sees encrypted bytes only
+```
 
-For stable ports, ngrok paid plans offer reserved TCP addresses. For port 443 with custom domains, use `ngrok tls --url=yourdomain.com` (TLS passthrough mode, paid).
+**Gateway URL patterns:**
+- `<id>-8080.<domain>` → HTTP to port 8080 (setup endpoint)
+- `<id>-8443s.<domain>` → TLS passthrough to port 8443 (the "s" suffix)
+
+### Deploy and Get CSR
+
+```bash
+phala deploy -n tee-le-demo -c docker-compose-letsencrypt.yaml
+# Wait for it to start...
+
+# Get the CSR
+curl https://<app-id>-8080.dstack-pha-prod5.phala.network/csr > tee.csr
+```
+
+### Complete ACME DNS-01 Challenge
+
+Using acme.sh with Cloudflare:
+```bash
+export CF_Token="your-cloudflare-api-token"
+
+# Submit CSR to Let's Encrypt
+docker run --rm -v $(pwd):/acme.sh \
+  -e CF_Token="$CF_Token" \
+  neilpang/acme.sh \
+  --signcsr --csr /acme.sh/tee.csr \
+  --dns dns_cf \
+  -d oracle.yourdomain.com
+```
+
+Or manually:
+1. Submit CSR to your ACME client
+2. Add the TXT record for `_acme-challenge.oracle.yourdomain.com`
+3. Complete the challenge and get the signed cert
+
+### POST Certificate to TEE
+
+```bash
+curl -X POST --data-binary @oracle.yourdomain.com.cer \
+  https://<app-id>-8080.dstack-pha-prod5.phala.network/cert
+```
+
+The TEE starts its HTTPS server with the signed cert.
+
+### Access via TLS Passthrough
+
+```bash
+# Via gateway passthrough (note the "s" suffix)
+curl https://<app-id>-8443s.dstack-pha-prod5.phala.network/
+
+# Or via your custom domain (after setting CNAME)
+curl https://oracle.yourdomain.com/
+```
+
+### Attested TLS Verification
+
+The cert fingerprint is bound to the TEE attestation:
+
+```bash
+# 1. Get cert fingerprint from TLS connection
+echo | openssl s_client -connect <app-id>-8443s.dstack-pha-prod5.phala.network:443 2>/dev/null | \
+  openssl x509 -fingerprint -sha256 -noout
+
+# 2. Compare with attestation
+curl https://<app-id>-8080.dstack-pha-prod5.phala.network/attestation
+```
+
+For full Attested TLS with Certificate Transparency: enumerate all certs issued for your domain via CT logs, verify each fingerprint appears in a valid TEE attestation.
 
 ## Other Connectivity Options
 
@@ -143,7 +243,16 @@ For stable ports, ngrok paid plans offer reserved TCP addresses. For port 443 wi
 
 ## Key Insight
 
-**The certificate doesn't need CA signing.** The attestation IS the trust anchor. By binding the certificate fingerprint to a valid TEE attestation, we prove the certificate was generated inside the TEE. This works through any untrusted relay.
+**Attested TLS combines CA trust with code trust.**
+
+- Without attestation: you trust the CA didn't misissue, the DNS wasn't hijacked, the server operator is honest
+- With attestation: you trust the verified code that holds the private key
+
+Both approaches have their place:
+- Self-signed + attestation is simpler but requires custom verification
+- CA + attestation (Attested TLS) works with browsers AND provides additional assurance
+
+The common thread: **bind the certificate to attested code.** Whether the cert is self-signed or CA-signed, the attestation proves which code generated it.
 
 ## Exercise: Let's Encrypt Integration
 

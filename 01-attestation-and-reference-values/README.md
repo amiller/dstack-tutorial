@@ -365,10 +365,13 @@ When a dstack app uses KMS (most do), there's an **AppAuth contract** on Base th
 - **Who is the owner?** — The address that can authorize new code versions
 - **What's the upgrade history?** — All `addComposeHash()` calls are recorded as events
 - **Is it locked?** — Has `disableUpgrades()` been called?
+- **Is there a notice period?** — Can users exit before new code activates?
 
 Check the AppAuth contract on [Basescan](https://basescan.org) to see the full history of authorized code versions. Unlike traditional servers where deployments are invisible, every "upgrade" is permanently recorded on-chain.
 
-See [05-onchain-authorization](../05-onchain-authorization#viewing-upgrade-history) for how to inspect upgrade history.
+For DevProof applications, **instant upgrades are a rug vector.** The solution is a timelock — new code must be proposed N days before activation, giving users time to audit and exit. This shifts trust from "trust the operator" to "trust you can exit in time."
+
+See [05-onchain-authorization](../05-onchain-authorization#viewing-upgrade-history) for inspecting upgrade history, and [09-extending-appauth](../09-extending-appauth) for implementing timelocks.
 
 ---
 

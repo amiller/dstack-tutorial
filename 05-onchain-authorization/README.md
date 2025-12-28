@@ -84,6 +84,16 @@ Example events from a real deployment:
 
 **Why this matters:** Users and auditors can verify the complete history of what code was ever authorized. Unlike traditional servers where deployments are invisible, every "upgrade" is permanently recorded on-chain.
 
+### DevProof Upgrades: The Exit Guarantee
+
+On-chain visibility is necessary but not sufficient. With instant `addComposeHash()`, the operator can still push malicious code with no warning:
+
+```
+Operator calls addComposeHash(malicious) → Instantly active → Users rugged
+```
+
+For true DevProof, use a **timelock** — new code must be announced N days before activation, giving users time to audit and exit. See [09-extending-appauth](../09-extending-appauth) for `TimelockAppAuth`, which enforces a notice period on-chain.
+
 ## Finding Your AppAuth Address
 
 ```bash
