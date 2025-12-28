@@ -66,6 +66,17 @@ jobs:
           python3 test_local.py
           docker compose down || true
 
+      - name: Test 04-gateways-and-tls
+        run: |
+          docker ps -q | xargs -r docker stop
+          cd 04-gateways-and-tls
+          docker compose build
+          docker compose run -d --rm -p 8443:8443 \
+            -v ~/.phala-cloud/simulator/0.5.3/dstack.sock:/var/run/dstack.sock \
+            app
+          sleep 5
+          python3 verify_tls.py https://localhost:8443
+
       - name: Test 05-onchain-authorization (local)
         run: |
           docker ps -q | xargs -r docker stop
