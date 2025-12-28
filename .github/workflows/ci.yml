@@ -42,7 +42,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Phala CLI
-        run: npm install -g @phala/cloud-cli
+        run: npm install -g phala
 
       - name: Install Python dependencies
         run: |
@@ -102,7 +102,7 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Install Phala CLI
-        run: npm install -g @phala/cloud-cli
+        run: npm install -g phala
 
       - name: Install Python dependencies
         run: |
