@@ -1,0 +1,7 @@
+[profile.default]
+src = "."
+out = "out"
+libs = ["lib"]
+
+[rpc_endpoints]
+anvil = "http://localhost:8545"

@@ -1,6 +1,6 @@
-# Tutorial 09: Multi-Node and Custom Authorization
+# Tutorial 09: Custom Authorization and On-Chain Due Diligence
 
-Deploy multi-node setups with `allowAnyDevice` and extend AppAuth with custom logic.
+Extend AppAuth with custom authorization logic, including timelock patterns for code upgrades.
 
 ## Prerequisites
 
@@ -11,9 +11,52 @@ Complete [05-onchain-authorization](../05-onchain-authorization) first to unders
 The default `phala deploy` creates an AppAuth that only allows a single device. For multi-node deployments or custom authorization logic, you need to deploy the contract yourself.
 
 This tutorial covers:
+- **Timelock upgrades** — notice period before new code activates
 - Multi-node with `allowAnyDevice=true`
 - Owner-controlled device/hash whitelisting
-- Custom AppAuth contracts (NFT-gated, timelock, multi-sig)
+- Custom AppAuth contracts (NFT-gated, multi-sig)
+
+## On-Chain Due Diligence: The Exit Guarantee
+
+The most important pattern in this tutorial is the **timelock for compose hash upgrades**.
+
+### The Problem
+
+With instant `addComposeHash()`, the operator can push malicious code with no warning:
+
+```
+Operator calls addComposeHash(malicious) → Instantly active → Users rugged
+```
+
+Users must trust the operator won't rug them. That's not devproof.
+
+### The Solution: Notice Period
+
+A timelock transforms the trust model. New code must be announced N days before activation:
+
+```
+Operator calls proposeComposeHash(newHash)
+    → Wait period begins (visible on-chain)
+    → Users can audit the new code (compose hash → deterministic build)
+    → Users can EXIT before activation if they disagree
+    → Anyone calls activateComposeHash(newHash) after delay
+```
+
+### The Key Insight
+
+Trust shifts from **"trust the operator"** to **"trust you can exit in time"**.
+
+This is devproof: users don't need to trust anyone, they just need to monitor and react. The blockchain enforces the notice period — the operator cannot bypass it.
+
+### Use Cases
+
+- **Light client oracles** ([08-lightclient](../08-lightclient)): Users can trust code changes are announced
+- **Multi-node clusters**: Operators can verify proposed code before their nodes run it
+- **DeFi integrations**: Protocols can pause integrations if bad code is proposed
+
+See [TIMELOCK_APPAUTH_PLAN.md](./TIMELOCK_APPAUTH_PLAN.md) for implementation details.
+
+Related work: [Nerla's demo](https://github.com/njeans/dstack/tree/update-demo/demo)
 
 ## Multi-Node with allowAnyDevice
 
@@ -167,27 +210,20 @@ contract DstackMembershipNFT is ERC721, IAppAuth {
 
 This creates a "1 NFT = 1 node" model where token holders control cluster participation.
 
-### Example: Timelock Upgrades
+### Example: Timelock Upgrades (Implemented)
 
-Add a delay before new compose hashes become active:
+See [TimelockAppAuth.sol](./TimelockAppAuth.sol) for the full implementation with tests.
 
-```solidity
-contract TimelockAppAuth is DstackApp {
-    uint256 public constant DELAY = 2 days;
-    mapping(bytes32 => uint256) public pendingComposeHashes;
-
-    function proposeComposeHash(bytes32 hash) external onlyOwner {
-        pendingComposeHashes[hash] = block.timestamp + DELAY;
-    }
-
-    function activateComposeHash(bytes32 hash) external {
-        require(pendingComposeHashes[hash] != 0, "Not proposed");
-        require(block.timestamp >= pendingComposeHashes[hash], "Too early");
-        allowedComposeHashes[hash] = true;
-        delete pendingComposeHashes[hash];
-    }
-}
+```bash
+# Run the tests
+forge test -vv
 ```
+
+Key methods:
+- `proposeComposeHash(hash)` — starts notice period (owner only)
+- `activateComposeHash(hash)` — activates after delay (anyone can call)
+- `cancelProposal(hash)` — cancels pending proposal (owner only)
+- `activatesAt(hash)` — returns when a proposal can be activated
 
 ### Example: Multi-Sig Approval
 
@@ -266,6 +302,12 @@ python3 add_compose_hash.py
 
 ```
 09-extending-appauth/
+├── TimelockAppAuth.sol        # Timelock pattern implementation
+├── TimelockAppAuth.t.sol      # Foundry tests (forge test)
+├── test_anvil.py              # Integration test (local anvil)
+├── deploy_timelock.py         # Deploy TimelockAppAuth to Phala Cloud + Base
+├── test_phalacloud.py         # Test timelock on Base mainnet
+├── TIMELOCK_APPAUTH_PLAN.md   # Design rationale
 ├── deploy_with_contract.py    # Deploy with allowAnyDevice=true
 ├── deploy_replica.py          # Deploy replica using existing appId
 ├── add_device.py              # Add device to whitelist
