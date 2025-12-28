@@ -100,7 +100,7 @@ phala deploy -n my-app -c docker-compose.yaml
 
 GitHub Actions runs tests on every push:
 - **Foundry Tests** — Solidity unit tests for `TeeOracle.sol`
-- **Simulator Tests** — Runs `test_local.py` for sections 03 and 05 with the phala simulator
+- **Simulator Tests** — Runs tests for sections 03, 04, 05, and 08 with the phala simulator
 - **Anvil Integration** — Full on-chain test: simulator + anvil + oracle contract deployment
 
 ### SDK Options

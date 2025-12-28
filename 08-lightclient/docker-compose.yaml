@@ -55,11 +55,11 @@ configs:
       # Try to connect to TEE environment
       client = None
       try:
-          from dstack_sdk import TappdClient
-          client = TappdClient()
-          key_result = client.derive_key("/oracle", "")
-          sk = SigningKey.from_pem(key_result.key)
-          print(f"TEE: using derived key (curve: {sk.curve.name})", flush=True)
+          from dstack_sdk import DstackClient
+          client = DstackClient()
+          key_result = client.get_key("/oracle", "secp256r1")
+          sk = SigningKey.from_string(bytes.fromhex(key_result.key[:64]), curve=NIST256p)
+          print(f"TEE: using derived key", flush=True)
       except Exception as e:
           print(f"WARNING: Not in TEE ({e}), using random key", flush=True)
           sk = SigningKey.generate(curve=NIST256p)
@@ -83,7 +83,13 @@ configs:
       checkpoint = get_checkpoint()
       block_num = rpc("eth_blockNumber")
       block = rpc("eth_getBlockByNumber", [block_num, False])
-      call_result = rpc("eth_call", [{"to": DAI, "data": "0x18160ddd", "gas": "0x100000"}, block_num])
+
+      # eth_call requires archive RPC - optional for basic verification
+      try:
+          call_result = rpc("eth_call", [{"to": DAI, "data": "0x18160ddd", "gas": "0x100000"}, block_num])
+      except Exception as e:
+          print(f"eth_call skipped (RPC pruned): {e}", flush=True)
+          call_result = None
 
       claim = {
           "type": "lightclient_attestation",
@@ -93,14 +99,15 @@ configs:
           "block_number": int(block_num, 16),
           "block_hash": block["hash"],
           "state_root": block["stateRoot"],
-          "call": {"to": DAI, "data": "0x18160ddd", "result": call_result},
       }
+      if call_result:
+          claim["call"] = {"to": DAI, "data": "0x18160ddd", "result": call_result}
 
       claim_bytes = json.dumps(claim, sort_keys=True).encode()
       claim_hash = hashlib.sha256(claim_bytes).digest()
       sig = sk.sign_deterministic(claim_hash, hashfunc=hashlib.sha256)
 
-      quote = client.tdx_quote(claim_hash.hex()).quote if client else None
+      quote = client.get_quote(claim_hash.hex()).quote if client else None
 
       proof = {
           "claim": claim,

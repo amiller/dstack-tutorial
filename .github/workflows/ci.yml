@@ -90,6 +90,18 @@ jobs:
           python3 test_local.py
           docker compose down || true
 
+      - name: Test 08-lightclient
+        run: |
+          docker ps -q | xargs -r docker stop
+          cd 08-lightclient
+          docker compose build
+          docker compose run --rm \
+            -v ~/.phala-cloud/simulator/0.5.3/dstack.sock:/var/run/dstack.sock \
+            app 2>&1 | tee output.txt
+          grep -q "TEE: using derived key" output.txt
+          grep -q "checkpoint_epoch" output.txt
+          grep -q "block_hash" output.txt
+
       - name: Stop simulator
         if: always()
         run: phala simulator stop || true
