@@ -2,6 +2,15 @@
 
 Store encrypted data in external databases using TEE-derived keys.
 
+## Why This Matters for DevProof
+
+**Encryption alone doesn't make an app DevProof.** A malicious operator can't read encrypted data, but they can still:
+- **Observe access patterns** — which records are accessed and when
+- **Rollback state** — restore old data to manipulate outcomes
+- **Correlate activity** — link encrypted records to external events
+
+For DevProof applications, encryption is necessary but not sufficient. This tutorial covers the encryption pattern; freshness anchoring via [08-lightclient](../08-lightclient) addresses rollback.
+
 ## The Problem
 
 TEE applications need persistent storage, but all storage is untrusted:
@@ -24,15 +33,11 @@ An external database operator (or malicious disk controller) could:
 2. **Modify data** — if no integrity checks
 3. **Rollback data** — restore old state to replay transactions
 
-## Threat Model: Disk vs External DB
+## Why External Database?
 
-| Environment | Rollback Protection |
-|-------------|---------------------|
-| **Phala Cloud** | Disk rollback not possible (operator doesn't control disk) |
-| **Self-hosted bare metal** | Disk rollback is in threat model |
-| **External database** | Always assume rollback is possible |
+Disk rollback is part of the DevProof threat model — any bare metal deployment could snapshot and restore the disk. Phala Cloud doesn't expose an easy way to do this, but that's an implementation detail, not a security guarantee.
 
-For DevProof applications, you must assume the operator can rollback state — even if running on Phala Cloud, you might migrate to bare metal later.
+We use an external database in this demo because rollback is obviously possible: you control the database, you can restore yesterday's backup. This makes the threat concrete and testable. The same encryption pattern applies to local disk storage.
 
 ## The Pattern: Encrypt Before Storing
 
@@ -140,22 +145,31 @@ The database only ever sees encrypted bytes.
 
 ## Security Considerations
 
+### What Encryption Gives You
+
+| Property | Protected? | Notes |
+|----------|------------|-------|
+| **Confidentiality** | ✅ | Operator can't read data |
+| **Integrity** | ✅ | Tampering detected via auth tag |
+| **Freshness** | ❌ | Rollback to old state undetected |
+| **Access pattern hiding** | ❌ | Operator sees which keys when |
+
+### DevProof Implications
+
+For a truly DevProof application, consider:
+
+1. **Rollback attacks** — An operator restoring yesterday's database could reverse a withdrawal, replay a settled bet, or undo a governance vote. Anchor state freshness on-chain (see [08-lightclient](../08-lightclient)).
+
+2. **Access pattern leakage** — Even without reading data, an operator observing "user A accessed record X, then user B accessed record X" can infer relationships. For high-stakes privacy, consider ORAM or batched access patterns.
+
+3. **Correlation attacks** — Timing of encrypted writes correlated with external events (blockchain transactions, API calls) can reveal information.
+
 ### Key Derivation
-The encryption key is derived from `getKey("/notes", "encryption")`. This means:
+The encryption key is derived from `getKey("/notes", "encryption")`:
 - Same app (same compose hash) always gets the same key
 - Different apps get different keys
 - Key survives restarts
 
-### What's NOT Protected
-- **Access patterns**: Database sees which keys are accessed and when
-- **Record sizes**: Ciphertext length reveals plaintext length
-- **Rollback**: Old valid ciphertext decrypts successfully
-
-### Production Hardening
-- Use unique nonces (pynacl SecretBox handles this automatically)
-- Consider padding to hide record sizes
-- Combine with freshness mechanism for rollback protection
-
 ## Next Steps
 
-- [08-lightclient](../08-lightclient): Use blockchain for freshness anchoring
+- [08-lightclient](../08-lightclient) — Freshness anchoring via blockchain light client
