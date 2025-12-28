@@ -41,23 +41,16 @@ This is what smart contracts and DeFi aspire to, but TEEs let us apply it to pra
 
 The on-chain authorization pattern ([05](./05-onchain-authorization)) is the key primitive — it's not TDX-specific. Adding AMD SEV or AWS Nitro support means adding verification scripts for those attestation formats, not changing the architecture.
 
-### The Trust Model Shift
+### Dstack's Design Philosophy
 
-Traditional TEE apps: *"Trust me, it runs in a TEE"*
+Dstack was built for DevProof applications from the start — **"Code is Law" + "Assume Breach"**:
 
-DevProof TEE apps: *"Don't trust me — verify the code, check the upgrade history"*
-
-This mirrors how DeFi protocols handle governance. Projects like Compound and Uniswap use [Governor contracts with timelocks](https://docs.openzeppelin.com/contracts/4.x/governance) — proposed changes must wait before execution, giving stakeholders time to review. The same pattern applies to TEE code upgrades.
-
-The building blocks:
-
-1. **Verifiable code** — Auditors can confirm source matches deployed hash ([01](./01-attestation-and-reference-values), [02](./02-bitrot-and-reproducibility))
-2. **On-chain upgrade history** — Every code change is recorded as an event ([05](./05-onchain-authorization))
-3. **Governance controls** — Timelocks, multisig, or custom policies for upgrades ([08](./08-extending-appauth))
+- **Governance-as-code** — Smart contracts control application lifecycle (deployment, updates, deletion), creating immutable audit trails
+- **Verifiable, not perfect** — Rather than claiming TEEs are unbreakable, the system designs for recovery and limits exposure windows
 
 ## Why This Tutorial?
 
-**Running in a TEE doesn't automatically make your app DevProof.** If you follow typical Dstack guides, you'll get an ordinary server where you (the admin) can still "rug" your users. The app runs in a TEE, but the developer retains backdoors.
+**Running in a TEE doesn't automatically make your app DevProof.** If you follow typical guides, you'll get an ordinary server where you (the admin) can still "rug" your users. The app runs in a TEE, but the developer retains backdoors.
 
 DevProof design requires intentional effort:
 - Users must be able to verify what code is running (not just "some TEE code")
@@ -65,7 +58,7 @@ DevProof design requires intentional effort:
 - Upgrade mechanisms must be visible on-chain
 - The verification path must be documented and accessible
 
-Smart contracts solved these problems through open source, verifiable builds, on-chain codehash, and transparent upgrade policies. TEE apps need similar patterns — but the techniques are non-obvious and scattered across documentation. This tutorial brings them together.
+Smart contracts solved these problems through open source, verifiable builds, on-chain codehash, and transparent upgrade policies. TEE apps need similar patterns — the techniques exist in dstack but are scattered across documentation. This tutorial brings them together.
 
 ## Running Example: TEE Oracle
 
@@ -154,19 +147,14 @@ GitHub Actions runs tests on every push:
 
 ## Tutorial Sections
 
-### Core Tutorial
-
 1. **[01-attestation-and-reference-values](./01-attestation-and-reference-values)** — TEE quotes, reference hashes, and the auditor's perspective
 2. **[02-bitrot-and-reproducibility](./02-bitrot-and-reproducibility)** — Deterministic builds that auditors can verify now and later
 3. **[03-keys-and-replication](./03-keys-and-replication)** — Persistent keys via KMS and multi-node deployments
 4. **[04-gateways-and-tls](./04-gateways-and-tls)** — Self-signed TLS with attestation-bound certificates
 5. **[05-onchain-authorization](./05-onchain-authorization)** — On-chain upgrade history, transparent code changes
-
-### Advanced
-
 6. **[06-encryption-freshness](./06-encryption-freshness)** — Encrypted storage, integrity, rollback protection
 7. **[07-lightclient](./07-lightclient)** — Verified blockchain state via Helios light client
-8. **[08-extending-appauth](./08-extending-appauth)** — **Exit guarantees**: timelocks, multi-node, custom authorization
+8. **[08-extending-appauth](./08-extending-appauth)** — Exit guarantees: timelocks, multi-node, custom authorization
 
 ---
 
