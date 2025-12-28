@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  forge-tests:
+    name: Foundry Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 05-onchain-authorization
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Run forge tests
+        run: forge test -vvv
+
+  simulator-tests:
+    name: Simulator Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Phala CLI
+        run: npm install -g @phala/cloud-cli
+
+      - name: Install Python dependencies
+        run: |
+          pip install eth-account eth-keys eth-utils requests web3
+
+      - name: Start simulator
+        run: |
+          phala simulator start
+          sleep 3
+          ls -la ~/.phala-cloud/simulator/*/
+
+      - name: Test 03-keys-and-replication
+        run: |
+          cd 03-keys-and-replication
+          docker compose build
+          docker compose run -d --rm -p 8080:8080 \
+            -v ~/.phala-cloud/simulator/0.5.3/dstack.sock:/var/run/dstack.sock \
+            app
+          sleep 5
+          curl -s http://localhost:8080/ | head -20
+          python3 test_local.py
+          docker compose down || true
+
+      - name: Test 05-onchain-authorization (local)
+        run: |
+          cd 05-onchain-authorization
+          docker compose build
+          docker compose run -d --rm -p 8080:8080 \
+            -v ~/.phala-cloud/simulator/0.5.3/dstack.sock:/var/run/dstack.sock \
+            app
+          sleep 5
+          curl -s http://localhost:8080/ | head -20
+          python3 test_local.py
+          docker compose down || true
+
+      - name: Stop simulator
+        if: always()
+        run: phala simulator stop || true
+
+  anvil-integration:
+    name: Anvil Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install Phala CLI
+        run: npm install -g @phala/cloud-cli
+
+      - name: Install Python dependencies
+        run: |
+          pip install eth-account eth-keys eth-utils requests web3
+
+      - name: Start simulator
+        run: |
+          phala simulator start
+          sleep 3
+
+      - name: Start anvil
+        run: |
+          anvil &
+          sleep 2
+          cast block-number
+
+      - name: Build and start oracle
+        working-directory: 05-onchain-authorization
+        run: |
+          docker compose build
+          docker compose run -d --rm -p 8080:8080 \
+            -v ~/.phala-cloud/simulator/0.5.3/dstack.sock:/var/run/dstack.sock \
+            app
+          sleep 5
+          curl -s http://localhost:8080/
+
+      - name: Run anvil integration test
+        working-directory: 05-onchain-authorization
+        run: python3 test_anvil.py
+
+      - name: Cleanup
+        if: always()
+        run: |
+          pkill anvil || true
+          phala simulator stop || true
+          docker compose -f 05-onchain-authorization/docker-compose.yaml down || true

@@ -123,9 +123,9 @@ def main():
     # Fetch oracle data
     try:
         data = fetch_oracle_price()
-        print(f"✅ Got price: ${data['statement']['price']}")
-        print(f"   Source: {data['statement']['source']}")
-        print(f"   TLS Fingerprint: {data['statement']['tlsFingerprint'][:30]}...")
+        print(f"Got price: ${data['price'] / 100:.2f}")
+        print(f"Source: {data['source']}")
+        print(f"TLS Fingerprint: {data['tlsFingerprint'][:30]}...")
     except Exception as e:
         print(f"❌ Failed to fetch oracle: {e}")
         print("\nMake sure the oracle is running:")
