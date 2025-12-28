@@ -68,6 +68,7 @@ jobs:
 
       - name: Test 05-onchain-authorization (local)
         run: |
+          docker ps -q | xargs -r docker stop
           cd 05-onchain-authorization
           docker compose build
           docker compose run -d --rm -p 8080:8080 \
