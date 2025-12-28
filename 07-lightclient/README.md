@@ -41,6 +41,8 @@ Use cases:
 - Cross-chain bridges that verify source chain state
 - Oracles for L2s that need L1 state proofs
 
+For a deeper dive into why light clients and TEEs are a natural fit, see [Understanding Helios and Exploring Light Clients' Affinity to TEEs](https://heytdep.github.io/post/31/post.html) by heytdep.
+
 ## Run
 
 ```bash

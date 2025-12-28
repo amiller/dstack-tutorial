@@ -15,6 +15,32 @@ This is what smart contracts and DeFi aspire to, but TEEs let us apply it to pra
 | User consent collection | Developer can prove they collected N consents |
 | Data handling | Developer can prove no user data was exposed |
 
+### Security Stages
+
+[ERC-733](https://draft.erc733.org) (draft) defines a maturity model for TEE+EVM applications:
+
+| Stage | Name | Description |
+|-------|------|-------------|
+| **0** | Prototype / Ruggable | TEE is used but trust chains are incomplete. Developer or host remains a single point of failure. |
+| **1** | **Dev-Proof** | Developer cannot unilaterally alter, censor, or exfiltrate data without notice. TEE integrity is cryptographically verifiable. |
+| **2** | Decentralized TEE Network | Multiple enclaves/vendors share control. No single party can censor or upgrade unilaterally. |
+| **3** | Trustless TEE | Enclaves coordinate through cryptographic verification (TEE×ZK, multi-vendor cross-attestation). |
+
+**This tutorial gets you to Stage 1 and partway to Stage 2.** Most TEE apps today are Stage 0 — they run in a TEE but the developer can still rug users. Stage 1 is achievable with intentional design and is the minimum bar for "mainnet-worthy" applications.
+
+#### What this tutorial covers toward Stage 2
+
+| Stage 2 Requirement | Tutorial Coverage | Gap |
+|---------------------|-------------------|-----|
+| Multi-node deployment | ✅ `allowAnyDevice` in [08](./08-extending-appauth) | — |
+| On-chain authorization | ✅ AppAuth contract controls who can join | — |
+| Decentralized governance | ⚠️ Timelocks shown; multisig/Governor can layer on | Not demonstrated |
+| Multi-vendor TEE | ⚠️ AppAuth pattern is vendor-agnostic | Verification scripts for SEV/Nitro not included |
+| Cloud attestation | ❌ | See [Proof of Cloud](https://proofofcloud.org/) working group |
+| Permissionless operation | ⚠️ Architecture supports it | Requires open AppAuth policy |
+
+The on-chain authorization pattern ([05](./05-onchain-authorization)) is the key primitive — it's not TDX-specific. Adding AMD SEV or AWS Nitro support means adding verification scripts for those attestation formats, not changing the architecture.
+
 ### The Trust Model Shift
 
 Traditional TEE apps: *"Trust me, it runs in a TEE"*
@@ -144,8 +170,21 @@ GitHub Actions runs tests on every push:
 
 ---
 
+## Beyond Stage 1: User Opt-Out
+
+This tutorial focuses on Stage 1 (DevProof). For Stage 2+ patterns, see [njeans/dstack opt-out demo](https://github.com/njeans/dstack/tree/update-demo/demo) which demonstrates:
+
+- **Governance voting** on upgrade proposals
+- **User opt-out** — users who object can exclude their data from migration
+- **Data sovereignty** — opted-out users' data stays with the old version
+
+The opt-out pattern shifts trust from "I can exit in time" to "my data won't follow me without consent." This is a stronger guarantee than timelocks alone and is a key building block for Stage 2 systems.
+
+---
+
 ## References
 
+- [ERC-733](https://draft.erc733.org) (draft) — TEE+EVM security stages and design patterns
 - [Dstack Documentation](https://docs.phala.com/dstack)
 - [Phala Cloud](https://cloud.phala.network)
 - [trust-center](https://github.com/Phala-Network/trust-center) — Attestation verification
