@@ -94,6 +94,12 @@ jobs:
           python3 test_local.py
           docker compose down || true
 
+      - name: Test 07-encryption-freshness
+        run: |
+          docker ps -q | xargs -r docker stop
+          cd 07-encryption-freshness
+          ./test_local.sh
+
       - name: Test 08-lightclient
         run: |
           docker ps -q | xargs -r docker stop
