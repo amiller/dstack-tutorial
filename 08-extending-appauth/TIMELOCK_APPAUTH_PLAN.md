@@ -89,7 +89,7 @@ With timelock:
 
 ## Use Cases
 
-1. **Light Client Oracle (08-lightclient)**: Users of the oracle can trust that code changes are announced. If a malicious update is proposed, they can stop relying on the oracle before it activates.
+1. **Light Client Oracle (07-lightclient)**: Users of the oracle can trust that code changes are announced. If a malicious update is proposed, they can stop relying on the oracle before it activates.
 
 2. **Multi-node clusters**: Node operators can verify proposed code changes before their nodes start running new code.
 

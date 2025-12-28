@@ -24,6 +24,8 @@ This tutorial covers:
 
 The TLS fingerprint proves which server the TEE connected to. The quote proves the statement came from this exact code running in a TEE.
 
+> **Production hardening:** For higher assurance TLS verification (OCSP stapling, CRL checking, Certificate Transparency), see the [hardened-https-agent](https://github.com/Gldywn/hardened-https-agent) library and [phala-cloud-oracle-template](https://github.com/Gldywn/phala-cloud-oracle-template).
+
 ## Run Locally
 
 ```bash
@@ -371,7 +373,7 @@ Check the AppAuth contract on [Basescan](https://basescan.org) to see the full h
 
 For DevProof applications, **instant upgrades are a rug vector.** The solution is a timelock — new code must be proposed N days before activation, giving users time to audit and exit. This shifts trust from "trust the operator" to "trust you can exit in time."
 
-See [05-onchain-authorization](../05-onchain-authorization#viewing-upgrade-history) for inspecting upgrade history, and [09-extending-appauth](../09-extending-appauth) for implementing timelocks.
+See [05-onchain-authorization](../05-onchain-authorization#viewing-upgrade-history) for inspecting upgrade history, and [08-extending-appauth](../08-extending-appauth) for implementing timelocks.
 
 ---
 

@@ -92,7 +92,7 @@ On-chain visibility is necessary but not sufficient. With instant `addComposeHas
 Operator calls addComposeHash(malicious) → Instantly active → Users rugged
 ```
 
-For true DevProof, use a **timelock** — new code must be announced N days before activation, giving users time to audit and exit. See [09-extending-appauth](../09-extending-appauth) for `TimelockAppAuth`, which enforces a notice period on-chain.
+For true DevProof, use a **timelock** — new code must be announced N days before activation, giving users time to audit and exit. See [08-extending-appauth](../08-extending-appauth) for `TimelockAppAuth`, which enforces a notice period on-chain.
 
 ## Finding Your AppAuth Address
 
@@ -222,8 +222,8 @@ python3 test_anvil.py
 
 ## Next Steps
 
-- [06-hardening-https](../06-hardening-https): Strengthen TLS verification
-- [09-extending-appauth](../09-extending-appauth): Custom authorization contracts, multi-node with allowAnyDevice, owner-controlled whitelisting
+- [06-encryption-freshness](../06-encryption-freshness): Encrypted external storage
+- [08-extending-appauth](../08-extending-appauth): Custom authorization contracts, multi-node with allowAnyDevice, owner-controlled whitelisting
 
 ## References
 

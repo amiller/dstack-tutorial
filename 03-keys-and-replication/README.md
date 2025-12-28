@@ -162,7 +162,7 @@ Multiple TEE nodes can derive the **same key** if they share the same `appId`. T
     Same derived key            Same derived key
 ```
 
-For multi-node deployment with `allowAnyDevice=true`, see [09-extending-appauth](../09-extending-appauth).
+For multi-node deployment with `allowAnyDevice=true`, see [08-extending-appauth](../08-extending-appauth).
 
 ## Files
 

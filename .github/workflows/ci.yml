@@ -23,8 +23,8 @@ jobs:
         working-directory: 05-onchain-authorization
         run: forge test -vvv
 
-      - name: Test 09-extending-appauth
-        working-directory: 09-extending-appauth
+      - name: Test 08-extending-appauth
+        working-directory: 08-extending-appauth
         run: |
           forge install foundry-rs/forge-std --no-git
           forge test -vvv
@@ -94,16 +94,16 @@ jobs:
           python3 test_local.py
           docker compose down || true
 
-      - name: Test 07-encryption-freshness
+      - name: Test 06-encryption-freshness
         run: |
           docker ps -q | xargs -r docker stop
-          cd 07-encryption-freshness
+          cd 06-encryption-freshness
           ./test_local.sh
 
-      - name: Test 08-lightclient
+      - name: Test 07-lightclient
         run: |
           docker ps -q | xargs -r docker stop
-          cd 08-lightclient
+          cd 07-lightclient
           docker compose build
           docker compose run --rm \
             -v ~/.phala-cloud/simulator/0.5.3/dstack.sock:/var/run/dstack.sock \
@@ -167,8 +167,8 @@ jobs:
         working-directory: 05-onchain-authorization
         run: python3 test_anvil.py
 
-      - name: Run anvil integration test (09)
-        working-directory: 09-extending-appauth
+      - name: Run anvil integration test (08)
+        working-directory: 08-extending-appauth
         run: python3 test_anvil.py
 
       - name: Cleanup

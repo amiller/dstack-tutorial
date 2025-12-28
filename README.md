@@ -27,7 +27,7 @@ The building blocks:
 
 1. **Verifiable code** — Auditors can confirm source matches deployed hash ([01](./01-attestation-and-reference-values), [02](./02-bitrot-and-reproducibility))
 2. **On-chain upgrade history** — Every code change is recorded as an event ([05](./05-onchain-authorization))
-3. **Governance controls** — Timelocks, multisig, or custom policies for upgrades ([09](./09-extending-appauth))
+3. **Governance controls** — Timelocks, multisig, or custom policies for upgrades ([08](./08-extending-appauth))
 
 ## Why This Tutorial?
 
@@ -114,7 +114,7 @@ phala deploy -n my-app -c docker-compose.yaml
 
 GitHub Actions runs tests on every push:
 - **Foundry Tests** — Solidity unit tests for `TeeOracle.sol`
-- **Simulator Tests** — Runs tests for sections 03, 04, 05, and 08 with the phala simulator
+- **Simulator Tests** — Runs tests for sections 03, 04, 05, and 07 with the phala simulator
 - **Anvil Integration** — Full on-chain test: simulator + anvil + oracle contract deployment
 
 ### SDK Options
@@ -135,13 +135,12 @@ GitHub Actions runs tests on every push:
 3. **[03-keys-and-replication](./03-keys-and-replication)** — Persistent keys via KMS and multi-node deployments
 4. **[04-gateways-and-tls](./04-gateways-and-tls)** — Self-signed TLS with attestation-bound certificates
 5. **[05-onchain-authorization](./05-onchain-authorization)** — On-chain upgrade history, transparent code changes
-6. **[06-hardening-https](./06-hardening-https)** — OCSP stapling, CRL checking, CT records ([oracle template](https://cloud.phala.network/templates/node-oracle-template))
 
 ### Advanced
 
-7. **[07-encryption-freshness](./07-encryption-freshness)** — Encrypted storage, integrity, rollback protection
-8. **[08-lightclient](./08-lightclient)** — Verified blockchain state via Helios light client
-9. **[09-extending-appauth](./09-extending-appauth)** — **Exit guarantees**: timelocks, multi-node, custom authorization
+6. **[06-encryption-freshness](./06-encryption-freshness)** — Encrypted storage, integrity, rollback protection
+7. **[07-lightclient](./07-lightclient)** — Verified blockchain state via Helios light client
+8. **[08-extending-appauth](./08-extending-appauth)** — **Exit guarantees**: timelocks, multi-node, custom authorization
 
 ---
 

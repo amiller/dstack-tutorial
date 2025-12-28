@@ -152,7 +152,7 @@ contract BeaconRootOracle {
 
 For the tutorial, Option C is most practical:
 
-1. **TEE verifies checkpoint on L1** (already implemented in 08-lightclient)
+1. **TEE verifies checkpoint on L1** (already implemented in 07-lightclient)
 2. **Claim includes verification proof** (`checkpoint_verify_timestamp`)
 3. **AppAuth trusts TEE's verification** (the composeHash ensures correct code ran)
 

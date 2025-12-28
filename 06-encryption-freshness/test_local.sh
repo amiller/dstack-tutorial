@@ -19,7 +19,7 @@ docker compose build
 docker run --rm -d --name test-app --network=host \
   -e DATABASE_URL="postgres://postgres:postgres@localhost:5433/notes" \
   -v ~/.phala-cloud/simulator/0.5.3/dstack.sock:/var/run/dstack.sock \
-  07-encryption-freshness-app
+  06-encryption-freshness-app
 
 sleep 2
 python3 test_local.py

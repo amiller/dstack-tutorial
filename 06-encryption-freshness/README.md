@@ -1,4 +1,4 @@
-# Tutorial 07: Encryption and External Storage
+# Tutorial 06: Encryption and External Storage
 
 Store encrypted data in external databases using TEE-derived keys.
 
@@ -9,7 +9,7 @@ Store encrypted data in external databases using TEE-derived keys.
 - **Rollback state** — restore old data to manipulate outcomes
 - **Correlate activity** — link encrypted records to external events
 
-For DevProof applications, encryption is necessary but not sufficient. This tutorial covers the encryption pattern; freshness anchoring via [08-lightclient](../08-lightclient) addresses rollback.
+For DevProof applications, encryption is necessary but not sufficient. This tutorial covers the encryption pattern; freshness anchoring via [07-lightclient](../07-lightclient) addresses rollback.
 
 ## The Problem
 
@@ -68,11 +68,11 @@ plaintext = box.decrypt(ciphertext)  # fails if tampered
 Authenticated encryption doesn't prevent rollback attacks. If an attacker restores an old database row (with valid ciphertext from a previous state), the TEE decrypts it successfully and can't tell.
 
 Solutions for freshness anchoring:
-- On-chain monotonic counter (see [08-lightclient](../08-lightclient))
+- On-chain monotonic counter (see [07-lightclient](../07-lightclient))
 - Merkle tree root stored on-chain
 - Multi-TEE consensus on state
 
-This tutorial focuses on the encryption pattern. Freshness is addressed by combining with [08-lightclient](../08-lightclient).
+This tutorial focuses on the encryption pattern. Freshness is addressed by combining with [07-lightclient](../07-lightclient).
 
 ## Try It
 
@@ -99,7 +99,7 @@ docker compose build
 docker run --rm --network=host \
   -e DATABASE_URL="postgres://user:pass@ep-xxx.neon.tech/db?sslmode=require" \
   -v ~/.phala-cloud/simulator/0.5.3/dstack.sock:/var/run/dstack.sock \
-  07-encryption-freshness-app
+  06-encryption-freshness-app
 ```
 
 In another terminal:
@@ -134,7 +134,7 @@ The database only ever sees encrypted bytes.
 ## Files
 
 ```
-07-encryption-freshness/
+06-encryption-freshness/
 ├── app.py                # Flask app with pynacl encryption
 ├── docker-compose.yaml   # TEE app definition
 ├── test_local.sh         # Spins up external postgres + runs tests
@@ -158,7 +158,7 @@ The database only ever sees encrypted bytes.
 
 For a truly DevProof application, consider:
 
-1. **Rollback attacks** — An operator restoring yesterday's database could reverse a withdrawal, replay a settled bet, or undo a governance vote. Anchor state freshness on-chain (see [08-lightclient](../08-lightclient)).
+1. **Rollback attacks** — An operator restoring yesterday's database could reverse a withdrawal, replay a settled bet, or undo a governance vote. Anchor state freshness on-chain (see [07-lightclient](../07-lightclient)).
 
 2. **Access pattern leakage** — Even without reading data, an operator observing "user A accessed record X, then user B accessed record X" can infer relationships. For high-stakes privacy, consider ORAM or batched access patterns.
 
@@ -172,4 +172,4 @@ The encryption key is derived from `getKey("/notes", "encryption")`:
 
 ## Next Steps
 
-- [08-lightclient](../08-lightclient) — Freshness anchoring via blockchain light client
+- [07-lightclient](../07-lightclient) — Freshness anchoring via blockchain light client

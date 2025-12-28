@@ -1,4 +1,4 @@
-# Tutorial 09: Custom Authorization and On-Chain Due Diligence
+# Tutorial 08: Custom Authorization and On-Chain Due Diligence
 
 Extend AppAuth with custom authorization logic, including timelock patterns for code upgrades.
 
@@ -50,7 +50,7 @@ This is devproof: users don't need to trust anyone, they just need to monitor an
 
 ### Use Cases
 
-- **Light client oracles** ([08-lightclient](../08-lightclient)): Users can trust code changes are announced
+- **Light client oracles** ([07-lightclient](../07-lightclient)): Users can trust code changes are announced
 - **Multi-node clusters**: Operators can verify proposed code before their nodes run it
 - **DeFi integrations**: Protocols can pause integrations if bad code is proposed
 
@@ -301,7 +301,7 @@ python3 add_compose_hash.py
 ### Files
 
 ```
-09-extending-appauth/
+08-extending-appauth/
 ├── TimelockAppAuth.sol        # Timelock pattern implementation
 ├── TimelockAppAuth.t.sol      # Foundry tests (forge test)
 ├── test_anvil.py              # Integration test (local anvil)

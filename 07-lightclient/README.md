@@ -1,4 +1,4 @@
-# Tutorial 08: Light Client Oracle
+# Tutorial 07: Light Client Oracle
 
 Read verified Ethereum state inside a TEE without trusting an RPC provider.
 
@@ -105,7 +105,7 @@ See [CHECKPOINT_VERIFICATION_PLAN.md](./CHECKPOINT_VERIFICATION_PLAN.md) for alt
 ## Files
 
 ```
-08-lightclient/
+07-lightclient/
 ├── docker-compose.yaml              # Helios + oracle (self-contained)
 ├── CHECKPOINT_VERIFICATION_PLAN.md  # EIP-4788 implementation notes
 └── README.md
@@ -113,4 +113,4 @@ See [CHECKPOINT_VERIFICATION_PLAN.md](./CHECKPOINT_VERIFICATION_PLAN.md) for alt
 
 ## Next Steps
 
-- [09-extending-appauth](../09-extending-appauth): Custom authorization contracts
+- [08-extending-appauth](../08-extending-appauth): Custom authorization contracts
