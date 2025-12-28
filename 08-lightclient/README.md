@@ -61,18 +61,12 @@ ETH_RPC_URL="https://mainnet.infura.io/v3/YOUR_KEY" docker compose run --rm -e E
   "claim": {
     "type": "lightclient_attestation",
     "network": "mainnet",
-    "checkpoint_epoch": 416537,
-    "checkpoint_root": "0xbe1360...",
-    "block_number": 21492847,
-    "block_hash": "0xf180be...",
-    "state_root": "0x811128...",
-    "call": {
-      "to": "0x6b175474e89094c44da98b954eedeac495271d0f",
-      "data": "0x18160ddd",
-      "result": "0x00000000...db77394bd15356c736ab846"
-    }
+    "checkpoint_root": "0xbee4f32f...",
+    "block_number": 24108441,
+    "block_hash": "0x7cdc872d...",
+    "state_root": "0x352afa4f..."
   },
-  "claimHash": "a1b2c3...",
+  "claimHash": "3e0a038c...",
   "signature": "...",
   "pubkey": "...",
   "quote": "BAACAQI..."
@@ -86,23 +80,34 @@ The example queries DAI's `totalSupply()` (`0x18160ddd`) but you can modify the 
 Two things to verify:
 
 1. **TDX quote** — proves this claim came from a TEE running this code
-   → See [01-attestation-and-reference-values](../01-attestation-and-reference-values) for `dcap-qvl` + `dstack-mr` verification
+   → See [01-attestation-and-reference-values](../01-attestation-and-reference-values) for verification
 
 2. **Signature** — signed with KMS-derived key, verifiable on-chain
    → See [05-onchain-authorization](../05-onchain-authorization) for signature chain verification
 
-The `checkpoint_root` can be cross-checked against any beacon chain source (e.g., [beaconcha.in](https://beaconcha.in)).
+## Checkpoint Approach
+
+This example uses a **hardcoded checkpoint** (same as dstack-kms):
+
+```
+0xbee4f32f91e62060d2aa41c652f6c69431829cfb09b02ea3cad92f65bd15dcce
+```
+
+This is an epoch boundary checkpoint. Beacon nodes retain bootstrap data for these indefinitely, so no fallback URL is needed.
+
+See [CHECKPOINT_VERIFICATION_PLAN.md](./CHECKPOINT_VERIFICATION_PLAN.md) for alternative approaches including dynamic EIP-4788 verification.
 
 ## Limitations
 
-- **State proofs** require an RPC with `eth_getProof` support. The free PublicNode RPC doesn't support this, so `eth_call` requires setting `ETH_RPC_URL` to Infura/Alchemy.
-- **Checkpoint trust**: Initial sync uses beaconcha.in's checkpoint service. The root is included in the claim for cross-verification.
+- **State proofs** require an RPC with `eth_getProof` support. Free RPCs may not support this for historical state.
+- **Checkpoint trust**: The hardcoded checkpoint cannot be verified on-chain (outside EIP-4788's 27h window). Trust derives from the attested code (composeHash).
 
 ## Files
 
 ```
 08-lightclient/
-├── docker-compose.yaml  # Helios + oracle (self-contained)
+├── docker-compose.yaml              # Helios + oracle (self-contained)
+├── CHECKPOINT_VERIFICATION_PLAN.md  # EIP-4788 implementation notes
 └── README.md
 ```
 

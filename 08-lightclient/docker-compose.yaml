@@ -25,10 +25,15 @@ configs:
       RPC=$${ETH_RPC_URL:-https://ethereum-rpc.publicnode.com}
       echo "Using execution RPC: $$RPC"
 
+      # Hardcoded checkpoint (same approach as dstack-kms)
+      # This is an epoch boundary checkpoint - beacon nodes retain bootstrap data indefinitely
+      CHECKPOINT="0xbee4f32f91e62060d2aa41c652f6c69431829cfb09b02ea3cad92f65bd15dcce"
+      echo "Using checkpoint: $$CHECKPOINT"
+
       /root/helios ethereum \
         --network mainnet \
         --execution-rpc "$$RPC" \
-        --fallback https://sync-mainnet.beaconcha.in \
+        --checkpoint "$$CHECKPOINT" \
         --rpc-bind-ip 0.0.0.0 &
 
       echo "Waiting for Helios to sync..."
@@ -41,18 +46,18 @@ configs:
         sleep 2
       done
 
-      python3 /root/oracle.py
+      python3 /root/oracle.py "$$CHECKPOINT"
 
   oracle.py:
     content: |
-      import json, hashlib, requests
+      import sys, json, hashlib, requests
       from ecdsa import SigningKey, NIST256p
 
       HELIOS = "http://localhost:8545"
-      CHECKPOINT_API = "https://sync-mainnet.beaconcha.in"
       DAI = "0x6b175474e89094c44da98b954eedeac495271d0f"
 
-      # Try to connect to TEE environment
+      checkpoint_root = sys.argv[1] if len(sys.argv) > 1 else None
+
       client = None
       try:
           from dstack_sdk import DstackClient
@@ -74,17 +79,9 @@ configs:
               raise Exception(resp["error"])
           return resp.get("result")
 
-      def get_checkpoint():
-          r = requests.get(f"{CHECKPOINT_API}/checkpointz/v1/status", timeout=5)
-          data = r.json()["data"]["finality"]["finalized"]
-          return {"epoch": int(data["epoch"]), "root": data["root"]}
-
-      # Fetch verified data via Helios
-      checkpoint = get_checkpoint()
       block_num = rpc("eth_blockNumber")
       block = rpc("eth_getBlockByNumber", [block_num, False])
 
-      # eth_call requires archive RPC - optional for basic verification
       try:
           call_result = rpc("eth_call", [{"to": DAI, "data": "0x18160ddd", "gas": "0x100000"}, block_num])
       except Exception as e:
@@ -94,8 +91,7 @@ configs:
       claim = {
           "type": "lightclient_attestation",
           "network": "mainnet",
-          "checkpoint_epoch": checkpoint["epoch"],
-          "checkpoint_root": checkpoint["root"],
+          "checkpoint_root": checkpoint_root,
           "block_number": int(block_num, 16),
           "block_hash": block["hash"],
           "state_root": block["stateRoot"],
