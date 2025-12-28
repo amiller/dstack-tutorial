@@ -18,11 +18,12 @@ services:
         const client = new DstackClient()
         const app = express()
         app.use(express.text({ type: "*/*" }))
+        const DOMAIN = process.env.DOMAIN || "tee-oracle"
 
         if (!existsSync("/tmp/key.pem")) {
-          console.log("Generating keypair and CSR...")
+          console.log("Generating keypair and CSR for", DOMAIN)
           execSync("openssl genrsa -out /tmp/key.pem 2048")
-          execSync('openssl req -new -key /tmp/key.pem -out /tmp/csr.pem -subj "/CN=tee-oracle"')
+          execSync(`openssl req -new -key /tmp/key.pem -out /tmp/csr.pem -subj "/CN=${DOMAIN}"`)
         }
 
         const csr = readFileSync("/tmp/csr.pem", "utf8")
@@ -33,7 +34,7 @@ services:
           const hasCert = existsSync("/tmp/cert.pem")
           res.json({
             status: hasCert ? "ready" : "waiting_for_cert",
-            message: hasCert ? "HTTPS on :8443" : "GET /csr, do ACME, POST /cert"
+            message: hasCert ? "HTTPS on :443" : "GET /csr, do ACME, POST /cert"
           })
         })
 
@@ -66,7 +67,7 @@ services:
             if (req.url === "/") res.end(JSON.stringify({ status: "ok", tls: true }))
             else { res.statusCode = 404; res.end(JSON.stringify({ error: "not found" })) }
           })
-          httpsServer.listen(8443, () => console.log("HTTPS on :8443"))
+          httpsServer.listen(443, () => console.log("HTTPS on :443"))
         }
 
         app.listen(8080, () => console.log("Setup on :8080 - GET /csr, POST /cert"))
@@ -74,6 +75,8 @@ services:
         CMD ["node", "app.mjs"]
     ports:
       - "8080:8080"
-      - "8443:8443"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-tee-oracle}
     volumes:
       - ${DSTACK_SOCK:-/var/run/dstack.sock}:/var/run/dstack.sock
