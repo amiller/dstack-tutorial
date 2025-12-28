@@ -177,13 +177,30 @@ SUCCESS: Oracle request/fulfill cycle complete
 ```
 05-onchain-authorization/
 ├── TeeOracle.sol              # Request/fulfill oracle with signature verification
+├── TeeOracle.t.sol            # Forge unit tests (run: forge test)
 ├── foundry.toml               # Foundry config
-├── test_anvil.py              # Test request/fulfill on local anvil
+├── test_anvil.py              # Integration test with live oracle
 ├── test_local.py              # Test signature verification
 ├── test_phalacloud.py         # Test on Phala Cloud
 ├── docker-compose.yaml        # Oracle app
 ├── requirements.txt
 └── README.md
+```
+
+## Running Tests
+
+**Forge tests** (no oracle needed):
+```bash
+forge install foundry-rs/forge-std  # first time only
+forge test
+```
+
+**Anvil integration test** (requires oracle running):
+```bash
+anvil &
+phala simulator start
+docker compose up -d
+python3 test_anvil.py
 ```
 
 ## Contract Addresses

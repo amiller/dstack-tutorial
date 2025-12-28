@@ -41,8 +41,8 @@ CONTRACT_ABI = [
             {"name": "purpose", "type": "string"}
         ], "name": "proof", "type": "tuple"}
     ], "name": "fulfill", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
-    {"anonymous": False, "inputs": [{"indexed": True, "name": "requestId", "type": "uint256"}, {"indexed": True, "name": "requester", "type": "address"}, {"indexed": False, "name": "reward", "type": "uint256"}], "name": "RequestCreated", "type": "event"},
-    {"anonymous": False, "inputs": [{"indexed": True, "name": "requestId", "type": "uint256"}, {"indexed": False, "name": "price", "type": "uint256"}, {"indexed": False, "name": "fulfiller", "type": "address"}], "name": "RequestFulfilled", "type": "event"},
+    {"type": "event", "name": "RequestCreated", "inputs": [{"indexed": True, "name": "requestId", "type": "uint256", "internalType": "uint256"}, {"indexed": True, "name": "requester", "type": "address", "internalType": "address"}, {"indexed": False, "name": "reward", "type": "uint256", "internalType": "uint256"}], "anonymous": False},
+    {"type": "event", "name": "RequestFulfilled", "inputs": [{"indexed": True, "name": "requestId", "type": "uint256", "internalType": "uint256"}, {"indexed": False, "name": "price", "type": "uint256", "internalType": "uint256"}, {"indexed": False, "name": "fulfiller", "type": "address", "internalType": "address"}], "anonymous": False},
 ]
 
 def deploy_contract(app_id: str) -> str:
@@ -107,14 +107,19 @@ def main():
         "from": account.address,
         "value": reward,
         "nonce": w3.eth.get_transaction_count(account.address),
-        "gas": 100000,
+        "gas": 200000,
         "gasPrice": w3.eth.gas_price
     })
     signed = account.sign_transaction(tx)
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
-    request_id = contract.events.RequestCreated().process_receipt(receipt)[0]["args"]["requestId"]
+    # Parse request_id from logs (indexed parameter is in topics[1])
+    if not receipt["logs"]:
+        print(f"  ERROR: No logs in receipt. Status: {receipt['status']}")
+        print(f"  Receipt: {dict(receipt)}")
+        return False
+    request_id = int(receipt["logs"][0]["topics"][1].hex(), 16)
     print(f"  Request ID: {request_id}")
     print(f"  Reward: {w3.from_wei(reward, 'ether')} ETH")
 
@@ -155,11 +160,10 @@ def main():
         return False
 
     # Check fulfillment
-    fulfilled_event = contract.events.RequestFulfilled().process_receipt(receipt)[0]["args"]
     balance_after = w3.eth.get_balance(account.address)
     gas_cost = receipt["gasUsed"] * w3.eth.gas_price
 
-    print(f"  Fulfilled price: ${fulfilled_event['price'] / 100:.2f}")
+    print(f"  Fulfilled price: ${data['price'] / 100:.2f}")
     print(f"  Reward received: {w3.from_wei(balance_after - balance_before + gas_cost, 'ether'):.4f} ETH")
 
     # Verify request is marked fulfilled
