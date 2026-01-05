@@ -99,6 +99,20 @@ This is an epoch boundary checkpoint. Beacon nodes retain bootstrap data for the
 
 See [CHECKPOINT_VERIFICATION_PLAN.md](./CHECKPOINT_VERIFICATION_PLAN.md) for alternative approaches including dynamic EIP-4788 verification.
 
+---
+
+## Exercises
+
+### Exercise 1: Run Helios
+
+```bash
+./test_helios.sh
+```
+
+Observe the sync process. What's the difference between the "trusted" block (from checkpoint) and the "verified" block (from light client sync)?
+
+---
+
 ## Limitations
 
 - **State proofs** require an RPC with `eth_getProof` support. Free RPCs may not support this for historical state.

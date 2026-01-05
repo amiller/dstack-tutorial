@@ -320,6 +320,19 @@ The trust model: **attestation proves which code holds the private key.** Relays
 
 ---
 
+## Exercises
+
+### Exercise 1: Match certificate to attestation
+
+For a deployed app with a custom domain, get the cert fingerprint:
+```bash
+echo | openssl s_client -connect <domain>:443 2>/dev/null | openssl x509 -fingerprint -sha256 -noout
+```
+
+Then fetch the app's attestation and find the same fingerprint. This proves the TLS key is held by attested code.
+
+---
+
 ## TODO: Certificate Transparency Verification
 
 For domains using CT, you can provide strong assurance that all certificates were issued by attested TEE code:

@@ -58,6 +58,38 @@ docker compose run --rm \
 }
 ```
 
+---
+
+## Exercises
+
+### Exercise 1: Explore the oracle code
+
+Open `docker-compose.yaml` and find where `report_data` is bound to the statement hash.
+
+### Exercise 2: Modify and rebuild
+
+Change the oracle to fetch ETH price instead of BTC. Rebuild and run. Does the compose-hash change?
+
+### Exercise 3: Audit a public app
+
+Pick any app from [trust.phala.com](https://trust.phala.com) and audit it:
+
+```bash
+python3 verify.py c951a6fa03ebc23bc469916476a51977219bc2a2
+```
+
+Questions to consider:
+- What Docker images does it run? Are they from a source you trust?
+- What `allowed_envs` can be injected at runtime? Could any change security-critical behavior?
+- Is there a `pre_launch_script`? What does it do?
+- Can you find the source code for the images?
+
+### Exercise 4: Runtime vs compose-hash
+
+If you passed `API_URL` as a runtime environment variable instead of hardcoding it, would the compose-hash change? Why or why not?
+
+---
+
 ## Deploy to Phala Cloud
 
 ```bash
@@ -84,42 +116,45 @@ This is the core insight: **attestation is only as trustworthy as your reference
 
 Dstack is designed around **reproducible builds** at every layer:
 - **Hardware** — Intel provides attestation infrastructure
-- **OS layer** — meta-dstack is open source and reproducibly built (see [reproducibility docs](https://github.com/Dstack-TEE/meta-dstack/blob/main/docs/reproducibility.md) — TODO: placeholder)
+- **OS layer** — meta-dstack is open source and reproducibly built (see [meta-dstack](https://github.com/Dstack-TEE/meta-dstack))
 - **App layer** — You can build `app-compose.json` locally and compute the exact hash
 
-### Step 1: Validate Quote and Compare Measurements
+### Verify Any Public App
 
-Use the included Python script:
+Use the included script to audit any app on [trust.phala.com](https://trust.phala.com):
 
 ```bash
-# Install verification tools
-CFLAGS="-g0" cargo install dcap-qvl-cli
-CGO_CFLAGS="-g0" go install github.com/kvinwang/dstack-mr@latest
-
-# Get attestation from your deployed app
-phala cvms attestation tee-oracle --json > attestation.json
-
-# Download matching dstack OS image
-curl -LO https://github.com/Dstack-TEE/meta-dstack/releases/download/v0.5.5/dstack-0.5.5.tar.gz
-tar xzf dstack-0.5.5.tar.gz
-
-# Verify
-python3 verify_full.py attestation.json --image-folder dstack-0.5.5/
+python3 verify.py c951a6fa03ebc23bc469916476a51977219bc2a2
 ```
 
 Output:
 ```
-=== Step 1: Hardware Verification (dcap-qvl) ===
-  ✓ Hardware verification passed
+=== Verifying Public App: c951a6fa03ebc23bc469916476a51977219bc2a2 ===
 
-=== Step 2: Extract Measurements ===
-  Compose hash (from quote): 392b8a1f...
+Step 1: Fetching attestation from Phala Cloud API...
+  ✓ Found 1 instance(s)
+  KMS version: v0.5.3 (git:ca4af023e974427e4153)
+  Image: dstack-0.5.4.1
 
-=== Step 3: OS Verification (dstack-mr) ===
-  ✓ MRTD matches - kernel/initramfs verified
+Step 2: Fetching app_compose from app endpoint...
+  ✓ App name: primus-attestor-node
+  Manifest version: 2
+  KMS enabled: True
+  Allowed envs: ['PRIVATE_KEY', 'BASE_RPC_URL', ...]
 
-=== Step 4: Compose Hash Verification ===
-  ✓ MATCH - Compose hash verified!
+Step 3: Verifying compose hash...
+  Computed hash: c211d18cc851609f...
+
+=== Audit Summary ===
+Docker images in compose:
+  image: redis:latest
+  image: primuslabs/attestor-node:${IMAGE_TAG}
+  ...
+```
+
+For hardware verification (optional), install `dcap-qvl-cli`:
+```bash
+CFLAGS="-g0" cargo install dcap-qvl-cli
 ```
 
 ---
@@ -190,26 +225,9 @@ curl localhost:8090/info
 
 See [prelaunch-script](../../prelaunch-script) for the Phala Cloud script source, and [attestation/configid-based](../../attestation/configid-based) for standalone verification.
 
-### Two Verification Approaches
+### ConfigID vs RTMR3
 
-Dstack supports two ways to verify compose-hash:
-
-**ConfigID-based (v0.5.1+)** — simpler, used by this tutorial
-- Compose-hash is stored directly in `mr_config_id` (padded to 96 chars)
-- Just compare measurement registers to known good values
-- See: [attestation/configid-based](../../attestation/configid-based)
-
-**RTMR3-based** — older, more complex
-- Compose-hash is an event in RTMR3's event log
-- Must replay the event log: each event's digest is hashed in sequence
-- Events include: `app-id`, `compose-hash`, `instance-id`, `key-provider`
-- See: [attestation/rtmr3-based](../../attestation/rtmr3-based)
-
-The `verify_full.py` in this tutorial uses ConfigID-based:
-```python
-config_id = report['mr_config_id']
-verified_hash = config_id[2:66]  # Extract compose hash after '01' prefix
-```
+This tutorial uses **ConfigID-based** verification (v0.5.1+), where compose-hash is stored directly in `mr_config_id`. Older dstack versions used **RTMR3 event logs**, where compose-hash was one of several events (app-id, instance-id, key-provider) whose digests were chained together. Trust-center supports both. For details, see [trust-center technical docs](https://docs.phala.com/dstack/trust-center-technical#phase-3:-source-code-verification), [rtmr3-based](https://github.com/Dstack-TEE/dstack-examples/tree/main/attestation/rtmr3-based), and [configid-based](https://github.com/Dstack-TEE/dstack-examples/tree/main/attestation/configid-based).
 
 ### Programmatic Verification
 
@@ -397,6 +415,6 @@ See [05-onchain-authorization](../05-onchain-authorization#viewing-upgrade-histo
 ```
 01-attestation-and-reference-values/
 ├── docker-compose.yaml  # Oracle app (quick-start, non-reproducible)
-├── verify_full.py       # Attestation verification script
+├── verify.py            # Audit any public app
 └── README.md
 ```

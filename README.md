@@ -15,16 +15,45 @@ This is what smart contracts and DeFi aspire to, but TEEs let us apply it to pra
 | User consent collection | Developer can prove they collected N consents |
 | Data handling | Developer can prove no user data was exposed |
 
+### Security ≠ DevProof
+
+Most TEE documentation focuses on *security*: proving hardware is genuine, code wasn't tampered with, measurements match. These are necessary but not sufficient.
+
+| Security asks | DevProof asks |
+|---------------|---------------|
+| Can an attacker break in? | Can the *developer* cheat users? |
+| Is the hardware genuine? | Who controls code upgrades? |
+| Does the code match the hash? | Can users audit what the hash means? |
+| Is the quote signed by Intel? | What's the upgrade notice period? |
+| Does Trust Center say ✅? | Can users exit if they disagree? |
+
+**A TEE app can pass every security check while remaining fully ruggable.** Stage 0 apps get ✅ on Trust Center. DevProof requires additional properties that security verification doesn't check.
+
+### Trust Anchors
+
+Every system has **trust anchors** — entities you must trust. TEE apps typically require trusting:
+
+| Trust Anchor | Security concern | DevProof concern |
+|--------------|------------------|------------------|
+| Hardware (Intel) | Is TDX backdoored? | (same) |
+| Cloud provider | Is infrastructure compromised? | Can verify independently |
+| KMS operator | Are keys leaked? | Onchain KMS removes this |
+| **App developer** | Is code authenticated? | **Can they rug users?** |
+
+Security focuses on *authentication* (is this the right developer?). DevProof focuses on *removing the developer as a trust anchor entirely* — users don't need to trust the developer because they can verify and exit.
+
+This tutorial specifically targets removing the developer trust anchor. Other trust anchors (hardware vendor, cloud provider) can also be reduced — see [08-extending-appauth](./08-extending-appauth) for multi-vendor patterns.
+
 ### Security Stages
 
 [ERC-733](https://draft.erc733.org) (draft) defines a maturity model for TEE+EVM applications:
 
-| Stage | Name | Description |
-|-------|------|-------------|
-| **0** | Prototype / Ruggable | TEE is used but trust chains are incomplete. Developer or host remains a single point of failure. |
-| **1** | **Dev-Proof** | Developer cannot unilaterally alter, censor, or exfiltrate data without notice. TEE integrity is cryptographically verifiable. |
-| **2** | Decentralized TEE Network | Multiple enclaves/vendors share control. No single party can censor or upgrade unilaterally. |
-| **3** | Trustless TEE | Enclaves coordinate through cryptographic verification (TEE×ZK, multi-vendor cross-attestation). |
+| Stage | Name | Security | DevProof | Gap |
+|-------|------|----------|----------|-----|
+| **0** | Ruggable | ✅ Passes | ❌ No | Developer can push updates without notice |
+| **1** | **DevProof** | ✅ Passes | ✅ Yes | Upgrade transparency + exit mechanisms |
+| **2** | Decentralized | ✅ Passes | ✅ Yes | No single party controls upgrades |
+| **3** | Trustless | ✅ Passes | ✅ Yes | Cryptographic multi-vendor verification |
 
 **This tutorial gets you to Stage 1 and partway to Stage 2.** Most TEE apps today are Stage 0 — they run in a TEE but the developer can still rug users. Stage 1 is achievable with intentional design and is the minimum bar for "mainnet-worthy" applications.
 
@@ -59,6 +88,23 @@ DevProof design requires intentional effort:
 - The verification path must be documented and accessible
 
 Smart contracts solved these problems through open source, verifiable builds, on-chain codehash, and transparent upgrade policies. TEE apps need similar patterns — the techniques exist in dstack but are scattered across documentation. This tutorial brings them together.
+
+### Phala Cloud Docs: Security Foundation
+
+[Phala Cloud's attestation docs](https://docs.phala.com/phala-cloud/attestation) cover the *security* foundation that DevProof builds on:
+
+| Topic | Phala Doc | This Tutorial |
+|-------|-----------|---------------|
+| Hardware/quote verification | [Verify the Platform](https://docs.phala.com/phala-cloud/attestation/verify-the-platform) | Assumed baseline |
+| Compose-hash basics | [Verify Your Application](https://docs.phala.com/phala-cloud/attestation/verify-your-application) | [02-bitrot](./02-bitrot-and-reproducibility) extends with reproducibility |
+| Trust Center reports | [Attestation Overview](https://docs.phala.com/phala-cloud/attestation) | What Trust Center *doesn't* check |
+| KMS and key derivation | Verify the Platform § Key Management | [03-keys](./03-keys-and-replication) adds trust model clarity |
+
+**DevProof gaps** (not covered in Phala docs):
+- Upgrade transparency → [05-onchain-authorization](./05-onchain-authorization)
+- Exit guarantees and timelocks → [08-extending-appauth](./08-extending-appauth)
+- Reproducible builds as requirement → [02-bitrot-and-reproducibility](./02-bitrot-and-reproducibility)
+- Verification from user/auditor perspective → [01-attestation](./01-attestation-and-reference-values)
 
 ## Running Example: TEE Oracle
 
@@ -129,6 +175,10 @@ phala deploy -n my-app -c docker-compose.yaml
 
 > **Note:** A DevProof design minimizes dependency on any single provider. The verification techniques work regardless of where you deploy.
 
+### Remote Debugging
+
+For debugging deployed CVMs on Phala Cloud, you can drop in an SSH service alongside your app. See [00-ssh-debugging](./00-ssh-debugging) for a ready-to-use pattern that gives you shell access to inspect containers, check logs, and debug networking — works with any compose file.
+
 ### CI
 
 GitHub Actions runs tests on every push:
@@ -147,14 +197,16 @@ GitHub Actions runs tests on every push:
 
 ## Tutorial Sections
 
-1. **[01-attestation-and-reference-values](./01-attestation-and-reference-values)** — TEE quotes, reference hashes, and the auditor's perspective
-2. **[02-bitrot-and-reproducibility](./02-bitrot-and-reproducibility)** — Deterministic builds that auditors can verify now and later
-3. **[03-keys-and-replication](./03-keys-and-replication)** — Persistent keys via KMS and multi-node deployments
-4. **[04-gateways-and-tls](./04-gateways-and-tls)** — Self-signed TLS with attestation-bound certificates
-5. **[05-onchain-authorization](./05-onchain-authorization)** — On-chain upgrade history, transparent code changes
-6. **[06-encryption-freshness](./06-encryption-freshness)** — Encrypted storage, integrity, rollback protection
-7. **[07-lightclient](./07-lightclient)** — Verified blockchain state via Helios light client
-8. **[08-extending-appauth](./08-extending-appauth)** — Exit guarantees: timelocks, multi-node, custom authorization
+| # | Section | DevProof property |
+|---|---------|-------------------|
+| 01 | **[attestation-and-reference-values](./01-attestation-and-reference-values)** | Framing verification from the *user/auditor* perspective, not the operator |
+| 02 | **[bitrot-and-reproducibility](./02-bitrot-and-reproducibility)** | A hash is meaningless if users can't audit what it represents |
+| 03 | **[keys-and-replication](./03-keys-and-replication)** | KMS trust model: who controls the root keys? |
+| 04 | **[gateways-and-tls](./04-gateways-and-tls)** | TLS certificates bound to attestation, not operator-controlled |
+| 05 | **[onchain-authorization](./05-onchain-authorization)** | Upgrade transparency — without this, all other verification is moot |
+| 06 | **[encryption-freshness](./06-encryption-freshness)** | Rollback protection: developer can't restore old state to replay attacks |
+| 07 | **[lightclient](./07-lightclient)** | Don't trust external blockchain state — verify it inside TEE |
+| 08 | **[extending-appauth](./08-extending-appauth)** | Exit mechanisms: timelocks give users time to leave before malicious upgrades |
 
 ---
 

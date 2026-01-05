@@ -102,6 +102,20 @@ All verifications passed:
   - Derived key signed the oracle message
 ```
 
+---
+
+## Exercises
+
+### Exercise 1: Change the key path
+
+In `docker-compose.yaml`, find `getKey('/oracle', 'ethereum')`. Change `'/oracle'` to `'/oracle2'`. Rebuild and run `test_local.py`. Does the derived address change?
+
+### Exercise 2: Add a second key
+
+Add a second `getKey()` call with a different path (e.g., `'/backup'`). Expose both addresses in the `/price` response. Verify they're different but both persistent across restarts.
+
+---
+
 ## Verifying the Signature Chain
 
 The verification steps:

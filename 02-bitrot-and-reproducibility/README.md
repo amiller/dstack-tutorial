@@ -54,13 +54,38 @@ If both succeed, you have a reproducible build.
 
 ---
 
+## Exercises
+
+### Exercise 1: Verify reproducibility
+
+```bash
+./build-reproducible.sh
+```
+
+Expected: "REPRODUCIBLE - both builds identical". If you see "NOT REPRODUCIBLE", check which layer differs.
+
+### Exercise 2: Compare images with skopeo
+
+```bash
+skopeo inspect oci-archive:build1.tar | jq '{digest: .Digest, layers: .Layers}'
+skopeo inspect oci-archive:build2.tar | jq '{digest: .Digest, layers: .Layers}'
+```
+
+Which layers match? The base image layers should be identical; only your app layers might differ.
+
+### Exercise 3: Break reproducibility
+
+Edit `Dockerfile` to remove `--chmod=644` from a COPY line. Rebuild. Does it still match?
+
+---
+
 ## What Makes Builds Non-Reproducible
 
 Docker builds are **not reproducible by default**:
 
 ```bash
-$ docker build -t test:v1 .
-$ docker build -t test:v2 .
+$ docker build --no-cache -t test:v1 .
+$ docker build --no-cache -t test:v2 .
 $ docker inspect test:v1 --format='{{.Id}}'
 sha256:a1b2c3...
 $ docker inspect test:v2 --format='{{.Id}}'

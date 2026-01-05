@@ -131,6 +131,31 @@ What happens:
 
 The database only ever sees encrypted bytes.
 
+---
+
+## Exercises
+
+### Exercise 1: Inspect encrypted data
+
+Run `./test_local.sh`, then view the raw database:
+```bash
+docker exec -it postgres psql -U postgres -d notes -c "SELECT * FROM notes;"
+```
+
+Is the content readable?
+
+### Exercise 2: Perform a rollback attack
+
+1. Create a note, save its ID
+2. Dump the database: `docker exec postgres pg_dump -U postgres notes > backup.sql`
+3. Update the note with new content
+4. Restore the backup: `docker exec -i postgres psql -U postgres notes < backup.sql`
+5. Read the note — what content do you see?
+
+What does this tell you about authenticated encryption vs freshness?
+
+---
+
 ## Files
 
 ```

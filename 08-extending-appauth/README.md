@@ -315,6 +315,28 @@ python3 add_compose_hash.py
 └── README.md
 ```
 
+---
+
+## Exercises
+
+### Exercise 1: Read the timelock tests
+
+```bash
+forge test -vv --match-contract TimelockAppAuthTest
+```
+
+What happens if you try to activate a hash before the notice period?
+
+### Exercise 2: Trace isAppAllowed
+
+In `TimelockAppAuth.sol`, trace what `isAppAllowed()` checks. How does it differ from the base `DstackApp`?
+
+### Exercise 3: Design an exit
+
+If you're a user of a timelock-protected app and see a malicious upgrade proposed, what steps would you take?
+
+---
+
 ## Deployment
 
 1. Deploy your custom contract to a supported chain (Base, Ethereum, etc.)

@@ -182,6 +182,28 @@ SUCCESS: Oracle request/fulfill cycle complete
   - Reward claimed by fulfiller
 ```
 
+---
+
+## Exercises
+
+### Exercise 1: View upgrade history
+
+Find an app's AppAuth contract on [Basescan](https://basescan.org) and view its event history. How many `ComposeHashAdded` events are there?
+
+### Exercise 2: Run the Foundry tests
+
+```bash
+forge test -vv
+```
+
+What does `testUpdatePrice` verify?
+
+### Exercise 3: Trace signature verification
+
+In `TeeOracle.sol`, find the `_verifySignature` function. What prevents a replay attack where someone resubmits the same signed price?
+
+---
+
 ## Files
 
 ```
