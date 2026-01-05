@@ -119,6 +119,16 @@ Dstack is designed around **reproducible builds** at every layer:
 - **OS layer** — meta-dstack is open source and reproducibly built (see [meta-dstack](https://github.com/Dstack-TEE/meta-dstack))
 - **App layer** — You can build `app-compose.json` locally and compute the exact hash
 
+### The 8090 Endpoint
+
+Every dstack CVM runs a **guest-agent** service on port 8090. This is not your application code — it's part of the dstack OS that provides public metadata about the enclave:
+
+- `/` — Dashboard showing app_id, instance_id, TCB info, running containers
+- `/logs/<container>` — Container logs (if `public_logs: true` in app-compose)
+- `/metrics` — Prometheus metrics (if `public_sysinfo: true`)
+
+The visibility is controlled by your `app-compose.json`. The code is part of [dstack-guest-agent](https://github.com/Dstack-TEE/dstack/tree/master/guest-agent).
+
 ### Verify Any Public App
 
 Use the included script to audit any app on [trust.phala.com](https://trust.phala.com):
