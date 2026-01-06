@@ -1,5 +1,6 @@
 services:
   app:
+    init: true
     build:
       context: .
       dockerfile_inline: |
