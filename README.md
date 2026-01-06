@@ -127,7 +127,7 @@ Each section adds a layer until we have a fully DevProof oracle.
 | Tool | Purpose | Install |
 |------|---------|---------|
 | Docker | Run apps | [docker.com](https://docker.com) |
-| Phala CLI | Simulator + deploy | `npm install -g @phala/cloud-cli` |
+| Phala CLI | Simulator + deploy | `npm install -g phala` |
 | Python 3 | Test scripts | System package |
 | Foundry | On-chain testing (05) | [getfoundry.sh](https://getfoundry.sh) |
 
