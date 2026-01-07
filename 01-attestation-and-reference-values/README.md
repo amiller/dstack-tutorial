@@ -2,27 +2,29 @@
 
 Build a TEE oracle and verify its attestation end-to-end.
 
-This tutorial covers:
-- Building an app that produces verifiable outputs
+This section covers:
+- Using the Dstack SDK and guest interface
+- Using the simulator dstack socket
 - Binding data to TDX quotes via `report_data`
-- Multiple verification methods (hosted, scripts, programmatic)
 
-## What it does
+## Running Example: a TEE Oracle
+
+Throughout this tutorial we will have a running example of an oracle, meaning an application that fetches data from some authoritative source, and then signs or attests to it so that it can be important, for example into a blockchain smart contract.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         TEE Oracle                              │
 │                                                                 │
-│  1. Fetch price from api.coingecko.com                         │
-│  2. Capture TLS certificate fingerprint                        │
-│  3. Build statement: { price, tlsFingerprint, timestamp }      │
-│  4. Get TDX quote with sha256(statement) as report_data        │
-│  5. Return { statement, quote }                                │
+│  1. Fetch price from api.coingecko.com                          │
+│  2. Capture TLS certificate fingerprint                         │
+│  3. Build statement: { price, tlsFingerprint, timestamp }       │
+│  4. Get TDX quote with sha256(statement) as report_data         │
+│  5. Return { statement, quote }                                 │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-The TLS fingerprint proves which server the TEE connected to. The quote proves the statement came from this exact code running in a TEE.
+This is a TLS oracle, meaning The TLS fingerprint proves which server the TEE connected to. The quote proves the statement came from this exact code running in a TEE.
 
 > **Production hardening:** For higher assurance TLS verification (OCSP stapling, CRL checking, Certificate Transparency), see the [hardened-https-agent](https://github.com/Gldywn/hardened-https-agent) library and [phala-cloud-oracle-template](https://github.com/Gldywn/phala-cloud-oracle-template).
 
@@ -268,7 +270,7 @@ The quote's `report_data` field contains `sha256(statement)`. Verify it matches:
 
 ```bash
 # Extract statement from response and hash it
-cat response.json | jq -r '.statement | @json' | shasum -a 256
+cat response.json | jq -c '.statement' | tr -d '\n' | shasum -a 256
 
 # Compare with reportDataHash in response
 cat response.json | jq -r '.reportDataHash'

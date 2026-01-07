@@ -101,6 +101,25 @@ Collapse to 2 sentences max:
 
 ---
 
+## Scope Mismatch: Local vs Remote
+
+**Problem:** The tutorial mixes local docker-compose development with Phala Cloud/TDX-only features without clearly distinguishing them.
+
+When running locally with `docker compose run`:
+- No 8090 endpoint (that's the dstack guest-agent, only exists in real CVM)
+- No real AppAuth contract
+- `appId` is a simulator placeholder, not a real on-chain address
+- `verify.py` only works against deployed apps on Phala Cloud
+
+The Trust Center / auditing public apps / AppAuth sections only apply to production deployments.
+
+**Fix options:**
+1. Split into "Run Locally" and "Verify Deployed Apps" sections with clear headers
+2. Add note at start of verification section: "The following applies to apps deployed on Phala Cloud or TDX hardware"
+3. Consider moving `verify.py` and public app auditing to a separate section or appendix
+
+---
+
 ## Suggested New Section Order
 
 1. What it does (diagram) — keep
