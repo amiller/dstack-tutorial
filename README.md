@@ -6,14 +6,7 @@ This tutorial teaches you to build **DevProof** (or "unruggable") applications u
 
 **DevProof** is a threat model where we assume the developer themselves might be malicious, and design the system so they *can't* betray users even if they wanted to.
 
-This is what smart contracts and DeFi aspire to, but TEEs let us apply it to practical, general-purpose code — not just on-chain logic.
-
-| Application | DevProof property |
-|-------------|-------------------|
-| Oracle for prediction markets | Developer can't manipulate how bets settle |
-| Verifiable credentials (zkTLS) | Developer can't forge credentials |
-| User consent collection | Developer can prove they collected N consents |
-| Data handling | Developer can prove no user data was exposed |
+This notion is very close to what smart contracts and DeFi are designed around. TEEs also let us apply it to practical, general-purpose code.
 
 ### Security ≠ DevProof
 
