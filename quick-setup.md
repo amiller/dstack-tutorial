@@ -1,15 +1,15 @@
-# Setup via Multipass Ubuntu 24.04
+# Setup via Ubuntu 24.04
 
 Install [Multipass](https://canonical.com/multipass/install) to launch lightweight Ubuntu VMs.
 
-Launch an Ubuntu 24.04 LTS VM with two CPUs, 20G disk, 6G RAM:
+Launch an Ubuntu 24.04 LTS VM with two CPUs, 20G disk, 6G RAM via Multipass:
 
 ```
 multipass launch noble -c 2 -d 20G -m 6G -n tee-tutorial
 multipass shell tee-tutorial
 ```
 
-Within the VM shell:
+Within the Ubuntu VM shell:
 
 ```bash
 # Install updates
