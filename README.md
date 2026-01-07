@@ -2,6 +2,8 @@
 
 This tutorial teaches you to build **DevProof** (or "unruggable") applications using Dstack — apps where even the developer can't cheat users.
 
+See the [quick setup guide](./quick-setup.md) to install dependencies and run the tutorial within an Ubuntu VM on your machine.
+
 ## Why DevProof?
 
 **DevProof** is a threat model where we assume the developer themselves might be malicious, and design the system so they *can't* betray users even if they wanted to.
