@@ -22,7 +22,7 @@ services:
 configs:
   run.sh:
     content: |
-      RPC=$${ETH_RPC_URL:-https://ethereum-rpc.publicnode.com}
+      RPC=$${ETH_RPC_URL:-https://eth.meowrpc.com}
       echo "Using execution RPC: $$RPC"
 
       # Hardcoded checkpoint (same approach as dstack-kms)
